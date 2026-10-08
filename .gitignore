@@ -1,0 +1,12 @@
+# O .xcodeproj é gerado pelo XcodeGen a partir do project.yml
+*.xcodeproj/
+
+# Artefatos do Xcode
+build/
+DerivedData/
+*.xcresult
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
