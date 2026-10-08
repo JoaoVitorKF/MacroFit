@@ -16,6 +16,7 @@ struct NumberField: View {
                     .keyboardType(field.allowsDecimal ? .decimalPad : .numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: 110)
+                    .accessibilityIdentifier("campo-\(field)")
                 Text(field.unit)
                     .foregroundStyle(.secondary)
                     .frame(minWidth: 32, alignment: .leading)

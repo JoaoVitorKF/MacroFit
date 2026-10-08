@@ -48,12 +48,27 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.joaovitor.macrofit.tests
 
+  MacroFitUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - MacroFitUITests
+    dependencies:
+      - target: MacroFit
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.joaovitor.macrofit.uitests
+        TEST_TARGET_NAME: MacroFit
+
 schemes:
   MacroFit:
     build:
       targets:
         MacroFit: all
         MacroFitTests: [test]
+        MacroFitUITests: [test]
     test:
       targets:
         - MacroFitTests
+        - MacroFitUITests

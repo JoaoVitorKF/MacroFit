@@ -11,6 +11,7 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-onboarding   → banco vazio (tela de boas-vindas)
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2  → abre direto na aba Perfil
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-floor -demo-tab 2 → perfil que cai no piso de calorias
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 1 -demo-form → abre o formulário de refeição
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -22,6 +23,11 @@ enum DemoData {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-demo-tab"), index + 1 < arguments.count else { return nil }
         return Int(arguments[index + 1])
+    }
+
+    /// `-demo-form` abre o formulário de nova refeição ao entrar na aba (para prints).
+    static var opensMealForm: Bool {
+        ProcessInfo.processInfo.arguments.contains("-demo-form")
     }
 
     private static var withSampleData: Bool {
