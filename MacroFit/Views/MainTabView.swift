@@ -10,7 +10,7 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            PlaceholderTab(title: "Hoje", symbol: "chart.pie")
+            TodayView(profile: profile)
                 .tabItem { Label("Hoje", systemImage: "chart.pie.fill") }
                 .tag(0)
 
@@ -37,15 +37,5 @@ struct MainTabView: View {
         #else
         return 0
         #endif
-    }
-}
-
-/// Provisório até as próximas etapas.
-private struct PlaceholderTab: View {
-    let title: String
-    let symbol: String
-
-    var body: some View {
-        ContentUnavailableView(title, systemImage: symbol, description: Text("Em construção."))
     }
 }

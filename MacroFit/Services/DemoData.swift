@@ -12,10 +12,11 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2  → abre direto na aba Perfil
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-floor -demo-tab 2 → perfil que cai no piso de calorias
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 1 -demo-form → abre o formulário de refeição
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo-over             → como -demo, mas com a meta estourada
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
-        return arguments.contains("-demo") || arguments.contains("-demo-onboarding") || arguments.contains("-demo-floor")
+        return ["-demo", "-demo-onboarding", "-demo-floor", "-demo-over"].contains { arguments.contains($0) }
     }
 
     /// Aba inicial (`-demo-tab 2` abre o Perfil). Útil para tirar prints sem tocar na tela.
@@ -31,7 +32,7 @@ enum DemoData {
     }
 
     private static var withSampleData: Bool {
-        ProcessInfo.processInfo.arguments.contains("-demo")
+        ProcessInfo.processInfo.arguments.contains("-demo") || ProcessInfo.processInfo.arguments.contains("-demo-over")
     }
 
     @MainActor
@@ -68,6 +69,10 @@ enum DemoData {
         ]
         for (name, type, day, kcal, protein, carbs, fat) in samples {
             context.insert(Meal(name: name, type: type, day: day, calories: kcal, protein: protein, carbs: carbs, fat: fat))
+        }
+        // -demo-over: um jantar exagerado para estourar a meta de calorias e de gordura
+        if ProcessInfo.processInfo.arguments.contains("-demo-over") {
+            context.insert(Meal(name: "Rodízio de pizza", type: .dinner, day: today, calories: 1400, protein: 50, carbs: 150, fat: 60))
         }
     }
 }
