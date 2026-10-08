@@ -51,7 +51,7 @@ No topo do Xcode, escolha um simulador de iPhone (ex.: *iPhone 17*) e aperte **�
 
 ### Testes
 
-São 52 testes: 39 unitários (calculadora, validação e lógica das refeições) e 13 de interface, que tocam na tela
+São 49 testes: 39 unitários (calculadora, validação e lógica das refeições) e 10 de interface, que tocam na tela
 do simulador (onboarding, adicionar, repetir, editar e apagar refeição, trocar de dia, tela Hoje).
 
 **⌘U** no Xcode, ou pelo terminal:
