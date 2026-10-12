@@ -115,5 +115,5 @@ struct MealFormView: View {
 
 #Preview {
     MealFormView(sheet: .new(day: .now))
-        .modelContainer(for: [UserProfile.self, Meal.self], inMemory: true)
+        .modelContainer(for: MacroFitSchema.models, inMemory: true)
 }

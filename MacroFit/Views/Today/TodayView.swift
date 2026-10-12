@@ -122,5 +122,5 @@ private struct MealTypesCard: View {
 #Preview {
     TodayView(profile: UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate))
         .environment(DaySelection())
-        .modelContainer(for: [UserProfile.self, Meal.self], inMemory: true)
+        .modelContainer(for: MacroFitSchema.models, inMemory: true)
 }

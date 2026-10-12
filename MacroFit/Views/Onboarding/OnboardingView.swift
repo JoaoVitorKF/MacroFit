@@ -43,5 +43,5 @@ struct OnboardingView: View {
 
 #Preview {
     OnboardingView()
-        .modelContainer(for: [UserProfile.self, Meal.self], inMemory: true)
+        .modelContainer(for: MacroFitSchema.models, inMemory: true)
 }

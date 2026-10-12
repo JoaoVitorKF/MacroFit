@@ -66,6 +66,7 @@ final class ProfileViewModel {
         guard let input else { return false }
 
         if let profile = existing {
+            let weightChanged = profile.weightKg != input.weightKg
             profile.sex = input.sex
             profile.age = input.age
             profile.weightKg = input.weightKg
@@ -73,6 +74,10 @@ final class ProfileViewModel {
             profile.activity = input.activity
             profile.goal = input.goal
             profile.updatedAt = .now
+            // Peso alterado no formulário vira um registro de hoje no histórico
+            if weightChanged {
+                WeightStore.record(weightKg: input.weightKg, on: .now, profile: profile, in: context)
+            }
         } else {
             context.insert(UserProfile(
                 sex: input.sex,
@@ -82,6 +87,8 @@ final class ProfileViewModel {
                 activity: input.activity,
                 goal: input.goal
             ))
+            // Primeiro ponto do histórico de peso
+            context.insert(WeightEntry(weightKg: input.weightKg, day: .now))
         }
         try? context.save()
         return true

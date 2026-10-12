@@ -14,7 +14,7 @@ struct MacroFitApp: App {
         }
         #endif
         do {
-            container = try ModelContainer(for: UserProfile.self, Meal.self)
+            container = try ModelContainer(for: Schema(MacroFitSchema.models))
         } catch {
             fatalError("Não foi possível abrir o banco de dados: \(error)")
         }

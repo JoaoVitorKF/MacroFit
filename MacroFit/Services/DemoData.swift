@@ -13,6 +13,7 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-floor -demo-tab 2 → perfil que cai no piso de calorias
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 1 -demo-form → abre o formulário de refeição
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-over             → como -demo, mas com a meta estourada
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2 -demo-weight → abre a evolução do peso
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -31,6 +32,11 @@ enum DemoData {
         ProcessInfo.processInfo.arguments.contains("-demo-form")
     }
 
+    /// `-demo-weight` abre a tela de evolução do peso ao entrar no Perfil (para prints).
+    static var opensWeightHistory: Bool {
+        ProcessInfo.processInfo.arguments.contains("-demo-weight")
+    }
+
     private static var withSampleData: Bool {
         ProcessInfo.processInfo.arguments.contains("-demo") || ProcessInfo.processInfo.arguments.contains("-demo-over")
     }
@@ -39,7 +45,7 @@ enum DemoData {
     static func makeContainer() -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         do {
-            let container = try ModelContainer(for: UserProfile.self, Meal.self, configurations: configuration)
+            let container = try ModelContainer(for: Schema(MacroFitSchema.models), configurations: configuration)
             if withSampleData {
                 insertSamples(into: container.mainContext)
             } else if ProcessInfo.processInfo.arguments.contains("-demo-floor") {
@@ -69,6 +75,14 @@ enum DemoData {
         ]
         for (name, type, day, kcal, protein, carbs, fat) in samples {
             context.insert(Meal(name: name, type: type, day: day, calories: kcal, protein: protein, carbs: carbs, fat: fat))
+        }
+        // Peso a cada 3 dias nos últimos 60 dias: de ~82,5 kg até 80 kg hoje, com pequenas oscilações
+        for step in 0...20 {
+            let day = Calendar.current.date(byAdding: .day, value: -3 * (20 - step), to: today) ?? today
+            let trend = 82.5 - 0.125 * Double(step)
+            let wobble = step == 20 ? 0 : 0.3 * sin(Double(step) * 1.7)
+            let weight = ((trend + wobble) * 10).rounded() / 10
+            context.insert(WeightEntry(weightKg: weight, day: day))
         }
         // -demo-over: um jantar exagerado para estourar a meta de calorias e de gordura
         if ProcessInfo.processInfo.arguments.contains("-demo-over") {

@@ -115,5 +115,5 @@ struct MealsView: View {
 #Preview {
     MealsView()
         .environment(DaySelection())
-        .modelContainer(for: [UserProfile.self, Meal.self], inMemory: true)
+        .modelContainer(for: MacroFitSchema.models, inMemory: true)
 }

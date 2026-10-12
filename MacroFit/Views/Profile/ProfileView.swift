@@ -1,16 +1,36 @@
 import SwiftData
 import SwiftUI
 
-/// Aba Perfil: metas calculadas e dados do usuário, com edição em uma folha (sheet).
+/// Aba Perfil: metas calculadas, peso (com gráfico) e dados do usuário, com edição em uma folha (sheet).
 struct ProfileView: View {
     let profile: UserProfile
     @State private var isEditing = false
+    /// Mudança nas metas causada pelo último peso registrado (mostra o aviso no topo).
+    @State private var goalChange: GoalChange?
+    @State private var showsWeightHistory = false
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Suas metas diárias") {
                     GoalsSummaryView(targets: profile.targets, sex: profile.sex, goal: profile.goal)
+                }
+
+                Section("Peso") {
+                    // O aviso fica junto do card (onde o usuário acabou de tocar), não no topo da tela
+                    if let goalChange {
+                        GoalChangeBanner(change: goalChange) {
+                            withAnimation { self.goalChange = nil }
+                        }
+                    }
+                    WeightCard(profile: profile) { change in
+                        withAnimation { goalChange = change }
+                    }
+                    NavigationLink {
+                        WeightHistoryView(profile: profile)
+                    } label: {
+                        Label("Ver evolução", systemImage: "chart.xyaxis.line")
+                    }
                 }
 
                 Section("Seus dados") {
@@ -29,7 +49,7 @@ struct ProfileView: View {
                         Label("Editar dados", systemImage: "pencil")
                     }
                 } footer: {
-                    Text("Atualize o peso de tempos em tempos para as metas acompanharem sua evolução.")
+                    Text("As metas usam o peso mais recente registrado. Registre o peso de tempos em tempos para elas acompanharem sua evolução.")
                 }
             }
             .navigationTitle("Perfil")
@@ -39,6 +59,14 @@ struct ProfileView: View {
             .sheet(isPresented: $isEditing) {
                 ProfileEditSheet(profile: profile)
             }
+            .navigationDestination(isPresented: $showsWeightHistory) {
+                WeightHistoryView(profile: profile)
+            }
+            #if DEBUG
+            .onAppear {
+                if DemoData.opensWeightHistory { showsWeightHistory = true }
+            }
+            #endif
         }
     }
 }
@@ -80,5 +108,5 @@ private struct ProfileEditSheet: View {
 
 #Preview {
     ProfileView(profile: UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate))
-        .modelContainer(for: [UserProfile.self, Meal.self], inMemory: true)
+        .modelContainer(for: MacroFitSchema.models, inMemory: true)
 }
