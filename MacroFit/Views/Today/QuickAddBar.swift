@@ -21,13 +21,12 @@ struct QuickAddBar: View {
     private var options: [Meal] { MealHistory.frequent(meals, limit: 8) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
                 Label("Adicionar rápido", systemImage: "bolt.fill")
                     .font(.headline)
-                Spacer()
                 if !options.isEmpty {
-                    Text("Segure para mudar a porção")
+                    Text("Toque para adicionar · segure para escolher a porção")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -39,7 +38,7 @@ struct QuickAddBar: View {
                     .foregroundStyle(.secondary)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: QuickAddChip.spacing) {
                         ForEach(options) { meal in
                             QuickAddChip(meal: meal) { onAdd(meal, .one) }
                                 .contextMenu {
@@ -62,38 +61,54 @@ struct QuickAddBar: View {
                                 }
                         }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollClipDisabled()
+                // A rolagem vai de borda a borda do card (e é cortada nela, sem vazar para a tela),
+                // com o primeiro atalho alinhado ao título
+                .padding(.horizontal, -CardModifier.padding)
+                .contentMargins(.horizontal, CardModifier.padding, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
             }
         }
         .card()
     }
 }
 
-/// Um atalho: nome, calorias e proteína, com "+" para deixar claro que adiciona.
+/// Um atalho: nome (até 2 linhas), calorias e proteína, com "+" para deixar claro que adiciona.
+/// Todos têm o mesmo tamanho, independente do nome; a largura deixa o terceiro aparecendo
+/// na borda, indicando que dá para rolar.
 private struct QuickAddChip: View {
+    static let width: CGFloat = 140
+    static let spacing: CGFloat = 10
+
     let meal: Meal
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(meal.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+            VStack(alignment: .leading, spacing: 8) {
+                // Nome com a largura toda do atalho
+                Text(meal.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    // Sempre reserva 2 linhas: atalhos com nome curto ficam da mesma altura
+                    .lineLimit(2, reservesSpace: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 4) {
                     Text("\(meal.calories.kcalText) kcal · P \(meal.protein.gramsText)")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.accentColor)
                 }
-                Image(systemName: "plus.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color.accentColor)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: 200, alignment: .leading)
+            .padding(12)
+            .frame(width: Self.width, alignment: .leading)
             .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 14))
         }

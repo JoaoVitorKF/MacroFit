@@ -66,9 +66,12 @@ extension Color {
 
 /// Card arredondado padrão do app. Funciona em modo claro e escuro.
 struct CardModifier: ViewModifier {
+    /// Margem interna do card (usada também por conteúdos que rolam de borda a borda).
+    static let padding: CGFloat = 16
+
     func body(content: Content) -> some View {
         content
-            .padding(16)
+            .padding(Self.padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
