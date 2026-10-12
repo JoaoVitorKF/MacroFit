@@ -19,8 +19,9 @@ final class QuickAddUITests: XCTestCase {
         add(attachment)
     }
 
+    /// Atalho pelo identificador: o botão da dica do dia também se chama "Adicionar Iogurte com whey".
     private var yogurtChip: XCUIElement {
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Adicionar Iogurte com whey")).firstMatch
+        app.buttons["atalho-Iogurte com whey"]
     }
 
     func testQuickAddAndUndo() {

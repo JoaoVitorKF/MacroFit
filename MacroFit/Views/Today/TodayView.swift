@@ -78,6 +78,17 @@ struct TodayView: View {
                     onCustomize: { meal in sheet = .fromTemplate(meal, day: selection.day, portion: .one) }
                 )
 
+                // Dica do momento (só faz sentido para hoje)
+                if selection.isToday {
+                    TipCard(
+                        consumed: summary.total,
+                        targets: targets,
+                        mealCount: summary.groups.reduce(0) { $0 + $1.meals.count }
+                    ) { meal in
+                        quickAdd(meal, portion: .one)
+                    }
+                }
+
                 VStack(spacing: 18) {
                     MacroBarView(nutrient: .protein, consumed: summary.total.protein, goal: targets.protein)
                     MacroBarView(nutrient: .carbs, consumed: summary.total.carbs, goal: targets.carbs)

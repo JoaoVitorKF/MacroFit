@@ -6,6 +6,8 @@ struct MainTabView: View {
     @State private var selectedTab = MainTabView.initialTab
     /// Dia selecionado, compartilhado entre Hoje e Refeições.
     @State private var daySelection = DaySelection()
+    /// Comemorações ao bater metas (aviso + confete por cima de qualquer aba).
+    @State private var celebrations = CelebrationCenter()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -23,6 +25,11 @@ struct MainTabView: View {
                 .tag(2)
         }
         .environment(daySelection)
+        .environment(celebrations)
+        .background(CelebrationWatcher(targets: profile.targets).environment(celebrations))
+        .overlay(alignment: .top) {
+            CelebrationOverlay().environment(celebrations)
+        }
         .onChange(of: scenePhase) { _, phase in
             // Ao voltar para o app depois da meia-noite, "hoje" passa a ser o novo dia
             if phase == .active {

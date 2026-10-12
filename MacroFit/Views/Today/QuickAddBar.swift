@@ -99,6 +99,7 @@ private struct QuickAddChip: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Adicionar \(meal.name), \(meal.calories.kcalText) kcal")
+        .accessibilityIdentifier("atalho-\(meal.name)")
     }
 }
 

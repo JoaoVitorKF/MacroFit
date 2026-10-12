@@ -12,13 +12,21 @@ carboidrato e gordura, e deixa você registrar as refeições do dia para ver qu
 
 | Aba | O que tem |
 |---|---|
-| **Hoje** | Anel de calorias (consumido / meta / quanto falta), botão grande **+ Adicionar refeição**, barras de proteína, carbo e gordura e resumo por tipo de refeição (toque em "Jantar" para adicionar um jantar) |
+| **Hoje** | Anel de calorias (consumido / meta / quanto falta), botão grande **+ Adicionar refeição**, **Adicionar rápido** (suas refeições frequentes com um toque; segure para escolher a porção), **dica do momento**, barras de proteína, carbo e gordura e resumo por tipo de refeição |
 | **Refeições** | Refeições do dia agrupadas por tipo. Deslize para a esquerda para **editar** ou **apagar**; toque para editar |
-| **Perfil** | TMB, gasto total, meta, déficit/superávit e macros; seus dados com botão **Editar** |
+| **Perfil** | TMB, gasto total, meta, déficit/superávit e macros; **peso** com mini gráfico, **Registrar peso** e **Ver evolução** (gráfico com 30/90 dias/tudo: toque ou arraste para ver cada dia); seus dados com botão **Editar** |
 
 Use as setas ‹ › no topo de Hoje ou Refeições para trocar de dia, ou toque na data para abrir o calendário.
 O dia escolhido vale para as duas abas. Ao adicionar uma refeição, toque em **Repetir refeição anterior**
-para reaproveitar algo que você já registrou.
+para reaproveitar algo que você já registrou. Escolha a porção (½×, 1×, 1½×, 2×) para ajustar os valores.
+
+Outras interações:
+- **Tela de carregamento** animada ao abrir o app.
+- **Comemoração:** ao bater a meta de proteína, ou levar as calorias para a faixa da meta (95–105%), aparecem um
+  aviso e um confete, com vibração. Só no momento em que acontece, não ao reabrir o app.
+- **Desfazer:** toda adição rápida mostra um aviso com "Desfazer" por 4 segundos.
+- **Peso → metas:** as metas usam o peso mais recente registrado. Ao registrar um peso novo, o app mostra como cada
+  meta mudou.
 
 ## Pré-requisitos
 
@@ -51,8 +59,9 @@ No topo do Xcode, escolha um simulador de iPhone (ex.: *iPhone 17*) e aperte **�
 
 ### Testes
 
-São 49 testes: 39 unitários (calculadora, validação e lógica das refeições) e 10 de interface, que tocam na tela
-do simulador (onboarding, adicionar, repetir, editar e apagar refeição, trocar de dia, tela Hoje).
+São 90 testes: 72 unitários (calculadora, validação, refeições, porções, peso, comemoração e dicas) e 18 de
+interface, que tocam na tela do simulador (onboarding, refeições, tela Hoje, adicionar rápido com Desfazer e porção,
+registro de peso, comemoração e dica).
 
 **⌘U** no Xcode, ou pelo terminal:
 
@@ -114,10 +123,10 @@ selecione o iPhone e marque **Connect via network**. O iPhone e o Mac precisam e
 ```
 MacroFit/
 ├── MacroFitApp.swift      # entrada do app e container do SwiftData
-├── Models/                # UserProfile e Meal (@Model), enums, Macros
-├── Services/              # NutritionCalculator (fórmulas), validação, formatação
+├── Models/                # UserProfile, Meal e WeightEntry (@Model), enums, Macros, Portion
+├── Services/              # NutritionCalculator (fórmulas), DailyCoach (comemoração e dicas), WeightLog, validação
 ├── ViewModels/            # estado dos formulários, dia selecionado, resumo do dia
-└── Views/                 # Onboarding, Today, Meals, Profile, Components
+└── Views/                 # Splash, Onboarding, Today, Meals, Profile, Weight, Components
 MacroFitTests/             # XCTest: calculadora, validação, refeições
 MacroFitUITests/           # XCUITest: fluxos na tela (usam dados de demonstração em memória)
 ```

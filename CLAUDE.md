@@ -42,10 +42,19 @@ xcrun simctl launch booted com.joaovitor.macrofit -demo              # perfil 30
 xcrun simctl launch booted com.joaovitor.macrofit -demo-onboarding   # banco vazio
 xcrun simctl launch booted com.joaovitor.macrofit -demo-floor        # perfil que cai no piso de 1200 kcal
 xcrun simctl launch booted com.joaovitor.macrofit -demo-over         # meta estourada (estados em laranja)
-# extras: -demo-tab N (0 Hoje, 1 Refeições, 2 Perfil) · -demo-form (abre o formulário de refeição)
+# extras: -demo-tab N (0 Hoje, 1 Refeições, 2 Perfil) · -demo-form (formulário de refeição)
+#         -demo-weight (abre a evolução do peso) · -demo-select (gráfico com um dia já selecionado)
+#         -skip-splash (pula a tela de carregamento; os testes de interface sempre usam)
 xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /caminho/print.png
 ```
-Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015. Os testes de interface contam com esses números.
+Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015, com 115 de 160 g de proteína. Há
+histórico de peso nos últimos 60 dias (82,5 → 80 kg) e refeições repetidas de 2 a 6 dias atrás (para os frequentes).
+Os testes de interface contam com esses números: **não mude o demo de hoje e de ontem sem ajustar os testes.**
+
+Prints de telas que só aparecem depois de um toque (aviso de Desfazer, comemoração, menu de porção) saem dos testes
+de interface: `XCTAttachment(screenshot:)` com `lifetime = .keepAlways`, e depois
+`xcrun xcresulttool export attachments --path <xcresult> --output-path <pasta>`. Use `build/tmp/` para arquivos
+temporários; ela está no `.gitignore`.
 
 ## Fórmulas (fonte única: `Services/NutritionCalculator.swift`)
 | Item | Regra |
@@ -63,18 +72,29 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
 `MacroFitTests/NutritionCalculatorTests.swift`, que têm as contas à mão nos comentários.
 
 ## Arquitetura (MVVM simples)
-- `Models/`: `UserProfile` e `Meal` (`@Model`), `Enums.swift`, `Macros` (struct somável)
+- `Models/`: `UserProfile`, `Meal` e `WeightEntry` (`@Model`), `Enums.swift`, `Macros` (struct somável, `scaled(by:)`), `Portion`
+  - **`MacroFitSchema.models`** lista todos os modelos. Use essa lista em todo `ModelContainer` (app, demo, previews e testes)
+  - `WeightEntry`: um registro por dia. **O peso do perfil é sempre o do registro mais recente**, sincronizado pelo
+    `WeightStore` (`Services/WeightLog.swift`), que devolve um `GoalChange` (metas antes e depois) para o aviso
   - Os enums são salvos como `String` (`sexRaw`, `typeRaw`…) e expostos por propriedades computadas tipadas
   - `Meal.day` guarda sempre o **início do dia** (00:00) e é o campo de filtro por dia. `createdAt` serve para ordenar
   - Há um único `UserProfile`; a `RootView` mostra o onboarding enquanto ele não existe
 - `Services/`: `NutritionCalculator` (funções puras), `Validation.swift` (`NumericField` com as faixas, `NumberParser`
-  que aceita vírgula ou ponto), `Formatting.swift` (`kcalText`, `gramsText`, `signedKcalText`)
+  que aceita vírgula ou ponto), `Formatting.swift` (`kcalText`, `gramsText`, `signedKcalText`), `WeightLog`/`WeightStore`
+  (histórico de peso), **`DailyCoach`** (funções puras: `achievements(before:after:targets:)` decide a comemoração;
+  `tip(...)` escolhe a dica, inclusive a sugestão do histórico com mais proteína por caloria que cabe no que falta)
 - `ViewModels/`: `ProfileViewModel` e `MealFormViewModel` guardam os campos como **texto** e só convertem/validam na
   leitura. `DaySelection` é o dia selecionado, compartilhado via `.environment` entre Hoje e Refeições.
-  `DayLogSummary` agrupa por tipo e soma (lógica pura)
+  `DayLogSummary` agrupa por tipo e soma (lógica pura). `MealHistory.frequent` (atalhos) e `uniqueRecent` (repetir).
+  `MealQuickAdd` adiciona e desfaz a adição rápida
 - `Views/`: `Onboarding/`, `Today/`, `Meals/`, `Profile/`, `Components/`
   - `DayMealsReader` encapsula o `@Query` filtrado por dia
-  - `MealSheet` (`.new(day:type:)` / `.edit(meal)`) controla a folha de refeição nas duas abas
+  - `MealSheet` (`.new(day:type:)` / `.edit(meal)` / `.fromTemplate(meal, day:, portion:)`) controla a folha de refeição
+  - `SplashView`/`LaunchContainerView`: tela de carregamento por cima da `RootView`, que já carrega por baixo
+  - Comemoração (`Components/Celebration.swift`): o `CelebrationWatcher` observa o total de **hoje** na `MainTabView`
+    e chama o `CelebrationCenter`, então funciona para qualquer forma de registrar. Ele ignora os primeiros 0,8 s
+    (carregamento) e só comemora quando a meta é **cruzada**. O confete é desenhado com `Canvas` e some com Reduzir Movimento
+  - `Weight/`: `WeightCard` (Perfil), `WeightHistoryView`, `WeightChart` (Swift Charts com `chartXSelection`), `WeightEntrySheet`
   - `Theme.swift`: cores e ícones de cada nutriente (`Nutrient`) e o modificador `.card()`
 
 ## Convenções
@@ -93,7 +113,13 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
 - **Botões dentro de linha de `List`/`Form`:** se houver mais de um na mesma linha, cada um precisa de
   `.buttonStyle(.borderless/.plain)`. Com o estilo padrão, um toque dispara todos (o `DaySelector` teve esse bug, e
   `testDayNavigationDoesNotTriggerOtherButtons` o cobre)
-- Testes de interface localizam campos pelos `accessibilityIdentifier` (`campo-age`, `campo-weight`, `campo-calories`,
-  `campo-nome`…) e linhas de refeição por `label BEGINSWITH "<nome>"`
+- Testes de interface localizam elementos pelos `accessibilityIdentifier`: campos (`campo-age`, `campo-weight`,
+  `campo-calories`, `campo-nome`…), atalhos (`atalho-<nome da refeição>`), `dica-adicionar`, `comemoracao` e
+  `seletor-porcao`. Linhas de refeição são localizadas por `label BEGINSWITH "<nome>"`. **Não localize por rótulo que
+  outro botão possa repetir:** o botão da dica ("Adicionar Iogurte…") já fez um teste segurar o botão errado
+- Para substituir o valor de um campo num teste de interface, use `doubleTap()` (seleciona) e depois `typeText`.
+  Tocar e apagar falha quando o cursor cai no começo do texto
+- Avisos de resultado aparecem **perto de onde o usuário tocou**. Exemplo: "Metas atualizadas" fica na seção Peso,
+  porque no topo da lista ficava fora da tela
 - Toda lógica testável fica fora das Views. Cada função nova no calculador ou na validação ganha teste
 - Git: um commit por etapa/feature, mensagens em português
