@@ -53,6 +53,7 @@ struct MealsView: View {
                             sheet = .new(day: selection.day)
                         }
                         .buttonStyle(.borderedProminent)
+                        .foregroundStyle(Color.accentForeground)
                     }
                 }
                 .listRowBackground(Color.clear)

@@ -83,9 +83,11 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
 - Os erros só aparecem depois que o usuário digitou algo no campo
 - Teclados: `.numberPad` (idade) e `.decimalPad` (o resto), sempre com `.keyboardDoneButton()` no formulário
 - Cores do sistema e `Color(.secondarySystemGroupedBackground)` nos cards, para o modo escuro funcionar sem esforço
-- Cores dos nutrientes: calorias = accent (verde), proteína = rosa, carbo = teal, gordura = laranja
-- Accent verde `rgb(30,150,80)` no claro e `rgb(40,165,90)` no escuro, escolhido para o texto branco do botão ter
-  contraste ≥ 3:1. Não clareie sem refazer a conta
+- Cores dos nutrientes: calorias = accent, proteína = rosa, carbo = teal, gordura = laranja
+- **Destaque (AccentColor): roxo `rgb(112,64,196)` no modo claro e amarelo `rgb(255,204,0)` no escuro**, pedido do usuário.
+  Texto ou ícone *sobre* o destaque (botões `.borderedProminent`) usa `Color.accentForeground`: branco no claro e
+  **preto no escuro**, porque branco sobre amarelo fica ilegível. Contraste de 6,5:1 e 13,9:1. Botão desabilitado volta ao `.secondary`
+- Passar da meta de calorias deixa o anel **vermelho**. Laranja se confundia com o amarelo do modo escuro
 - O botão "+ Adicionar refeição" da tela Hoje fica **no fluxo**, logo abaixo do anel. Flutuante, ele cobria as barras de macros
 - Passar da meta de proteína mostra "Meta atingida (+X g)" sem cor de alerta; nos outros macros e nas calorias, o aviso é laranja
 - **Botões dentro de linha de `List`/`Form`:** se houver mais de um na mesma linha, cada um precisa de

@@ -61,6 +61,7 @@ struct TodayView: View {
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.roundedRectangle(radius: 20))
+        .foregroundStyle(Color.accentForeground)
     }
 }
 

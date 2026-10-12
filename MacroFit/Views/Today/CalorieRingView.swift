@@ -14,7 +14,7 @@ struct CalorieRingView: View {
 
     private var remaining: Double { goal - consumed }
     private var isOver: Bool { remaining < 0 }
-    private var ringColor: Color { isOver ? .orange : .accentColor }
+    private var ringColor: Color { isOver ? .red : .accentColor }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -35,7 +35,7 @@ struct CalorieRingView: View {
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText())
-                        .foregroundStyle(isOver ? .orange : .primary)
+                        .foregroundStyle(isOver ? .red : .primary)
                     Text(isOver ? "kcal acima da meta" : "kcal restantes")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

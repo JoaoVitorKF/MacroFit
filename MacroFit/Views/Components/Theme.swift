@@ -58,6 +58,12 @@ enum Nutrient: CaseIterable, Identifiable {
     }
 }
 
+extension Color {
+    /// Cor do texto e dos ícones **sobre** o destaque (botões cheios): branco sobre o roxo do
+    /// modo claro, preto sobre o amarelo do modo escuro (branco sobre amarelo ficaria ilegível).
+    static let accentForeground = Color("AccentForeground")
+}
+
 /// Card arredondado padrão do app. Funciona em modo claro e escuro.
 struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {

@@ -30,6 +30,7 @@ struct OnboardingView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .foregroundStyle(viewModel.isValid ? Color.accentForeground : Color.secondary)
                     .controlSize(.large)
                     .disabled(!viewModel.isValid)
                     .padding(.horizontal, 20)
