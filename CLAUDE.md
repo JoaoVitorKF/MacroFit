@@ -104,6 +104,11 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
 - Teclados: `.numberPad` (idade) e `.decimalPad` (o resto), sempre com `.keyboardDoneButton()` no formulário
 - Cores do sistema e `Color(.secondarySystemGroupedBackground)` nos cards, para o modo escuro funcionar sem esforço
 - Cores dos nutrientes: calorias = accent, proteína = rosa, carbo = teal, gordura = laranja
+- Ícones dos nutrientes (`Nutrient.icon` + `NutrientIconView`): calorias 🔥 `flame.fill`, proteína **🥩**, carbo **🫘**,
+  gordura **coração** `bolt.heart.fill`, pedido do usuário. O SF Symbols não tem carne nem feijão, por isso os emojis.
+  A comemoração e a dica de proteína usam `trophy.fill`, porque o coração agora é da gordura
+- Faixa de atalhos com **rolagem livre**. O encaixe por atalho (`.viewAligned`) fazia arrastes curtos voltarem ao lugar,
+  e o usuário achou que não rolava. `testShortDragScrollsShortcuts` cobre isso
 - **Destaque (AccentColor): roxo `rgb(112,64,196)` no modo claro e amarelo `rgb(255,204,0)` no escuro**, pedido do usuário.
   Texto ou ícone *sobre* o destaque (botões `.borderedProminent`) usa `Color.accentForeground`: branco no claro e
   **preto no escuro**, porque branco sobre amarelo fica ilegível. Contraste de 6,5:1 e 13,9:1. Botão desabilitado volta ao `.secondary`

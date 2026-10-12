@@ -17,7 +17,7 @@ enum Achievement: Equatable {
 
     var symbol: String {
         switch self {
-        case .proteinGoal: "bolt.heart.fill"
+        case .proteinGoal: "trophy.fill"
         case .caloriesInRange: "flame.fill"
         }
     }
@@ -145,7 +145,7 @@ enum DailyCoach {
         // Proteína batida, faltam calorias
         if proteinDone {
             return DailyTip(
-                symbol: "bolt.heart.fill",
+                symbol: "trophy.fill",
                 title: "Proteína batida!",
                 message: "Faltam \(remainingKcal.kcalText) kcal. Complete com carboidratos e gorduras boas: arroz, batata, frutas, azeite, castanhas.",
                 tone: .success

@@ -38,12 +38,14 @@ enum Nutrient: CaseIterable, Identifiable {
         }
     }
 
-    var symbol: String {
+    /// Ícone do nutriente. O SF Symbols não tem carne nem feijão, então proteína e carboidrato
+    /// usam os emojis da Apple (coloridos e iguais em qualquer iPhone); os demais são SF Symbols.
+    var icon: NutrientIcon {
         switch self {
-        case .calories: "flame.fill"
-        case .protein: "bolt.heart.fill"
-        case .carbs: "leaf.fill"
-        case .fat: "drop.fill"
+        case .calories: .symbol("flame.fill")
+        case .protein: .emoji("🥩")
+        case .carbs: .emoji("🫘")
+        case .fat: .symbol("bolt.heart.fill")
         }
     }
 
@@ -62,6 +64,28 @@ extension Color {
     /// Cor do texto e dos ícones **sobre** o destaque (botões cheios): branco sobre o roxo do
     /// modo claro, preto sobre o amarelo do modo escuro (branco sobre amarelo ficaria ilegível).
     static let accentForeground = Color("AccentForeground")
+}
+
+enum NutrientIcon {
+    case symbol(String)
+    case emoji(String)
+}
+
+/// Desenha o ícone do nutriente: SF Symbol pintado com a cor do nutriente, ou o emoji como é.
+/// Segue a fonte de onde estiver (`.font`), então fica do mesmo tamanho do texto ao lado.
+struct NutrientIconView: View {
+    let nutrient: Nutrient
+
+    var body: some View {
+        switch nutrient.icon {
+        case .symbol(let name):
+            Image(systemName: name)
+                .foregroundStyle(nutrient.color)
+        case .emoji(let emoji):
+            Text(emoji)
+                .accessibilityHidden(true)
+        }
+    }
 }
 
 /// Card arredondado padrão do app. Funciona em modo claro e escuro.

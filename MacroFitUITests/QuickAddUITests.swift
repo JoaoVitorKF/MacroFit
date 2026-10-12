@@ -24,6 +24,27 @@ final class QuickAddUITests: XCTestCase {
         app.buttons["atalho-Iogurte com whey"]
     }
 
+    /// Arraste curto e lento (como com o mouse no simulador) deve rolar a faixa e ela ficar onde parou.
+    /// Com o encaixe por atalho (.viewAligned) ela voltava ao lugar e parecia travada.
+    func testShortDragScrollsShortcuts() {
+        XCTAssertTrue(yogurtChip.waitForExistence(timeout: 5))
+        let startX = yogurtChip.frame.minX
+        let fourth = app.buttons["atalho-Banana com pasta de amendoim"]
+        XCTAssertFalse(fourth.isHittable, "O 4º atalho começa fora da área visível")
+
+        let from = yogurtChip.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let to = from.withOffset(CGVector(dx: -70, dy: 0))
+        from.press(forDuration: 0.05, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+        sleep(1)
+
+        XCTAssertLessThan(yogurtChip.frame.minX, startX - 40, "A faixa ficou rolada (não voltou ao lugar)")
+
+        // E um gesto rápido rola vários atalhos de uma vez (não só um, como com o encaixe)
+        app.buttons["atalho-Frango grelhado, arroz e feijão"].swipeLeft()
+        sleep(1)
+        XCTAssertLessThan(yogurtChip.frame.minX, startX - 2 * 140, "Rolou mais de dois atalhos")
+    }
+
     func testQuickAddAndUndo() {
         XCTAssertTrue(app.staticTexts["1.015"].waitForExistence(timeout: 5))
         XCTAssertTrue(yogurtChip.waitForExistence(timeout: 5), "A refeição mais frequente do demo aparece nos atalhos")

@@ -61,13 +61,13 @@ struct QuickAddBar: View {
                                 }
                         }
                     }
-                    .scrollTargetLayout()
                 }
                 // A rolagem vai de borda a borda do card (e é cortada nela, sem vazar para a tela),
                 // com o primeiro atalho alinhado ao título
                 .padding(.horizontal, -CardModifier.padding)
                 .contentMargins(.horizontal, CardModifier.padding, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
+                // Rolagem livre: com encaixe (.viewAligned), arrastes curtos voltavam ao lugar e
+                // parecia que a faixa não rolava
             }
         }
         .card()
@@ -78,7 +78,7 @@ struct QuickAddBar: View {
 /// Todos têm o mesmo tamanho, independente do nome; a largura deixa o terceiro aparecendo
 /// na borda, indicando que dá para rolar.
 private struct QuickAddChip: View {
-    static let width: CGFloat = 140
+    static let width: CGFloat = 130
     static let spacing: CGFloat = 10
 
     let meal: Meal

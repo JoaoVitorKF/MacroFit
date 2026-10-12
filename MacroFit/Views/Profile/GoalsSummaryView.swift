@@ -102,7 +102,7 @@ private struct MacroTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Image(systemName: nutrient.symbol)
+                NutrientIconView(nutrient: nutrient)
                 Text(nutrient.name)
                     .fontWeight(.semibold)
             }

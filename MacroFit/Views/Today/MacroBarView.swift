@@ -16,9 +16,13 @@ struct MacroBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Label(nutrient.name, systemImage: nutrient.symbol)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(nutrient.color)
+                Label {
+                    Text(nutrient.name)
+                        .foregroundStyle(nutrient.color)
+                } icon: {
+                    NutrientIconView(nutrient: nutrient)
+                }
+                .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text("\(consumed.kcalText) / \(goal.gramsText)")
                     .font(.subheadline.monospacedDigit())
