@@ -19,5 +19,5 @@ final class WeightEntry {
 /// Todos os modelos salvos pelo app. Use esta lista ao criar qualquer `ModelContainer`
 /// (app, modo demo, previews e testes) para nenhum modelo ficar de fora.
 enum MacroFitSchema {
-    static let models: [any PersistentModel.Type] = [UserProfile.self, Meal.self, WeightEntry.self]
+    static let models: [any PersistentModel.Type] = [UserProfile.self, Meal.self, WeightEntry.self, CustomFood.self]
 }

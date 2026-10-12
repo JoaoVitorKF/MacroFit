@@ -1,7 +1,7 @@
 import Foundation
 
 /// Calorias e macronutrientes (em gramas). Usado tanto para metas quanto para somar refeições.
-struct Macros: Equatable {
+struct Macros: Hashable, Codable {
     var calories: Double
     var protein: Double
     var carbs: Double
