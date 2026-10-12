@@ -22,7 +22,7 @@ struct MacroFitApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            LaunchContainerView()
         }
         .modelContainer(container)
     }

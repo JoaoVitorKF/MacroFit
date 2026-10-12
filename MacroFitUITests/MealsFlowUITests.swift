@@ -10,7 +10,7 @@ final class MealsFlowUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         // Idioma fixo para os textos e números (vírgula decimal, "1.330")
-        app.launchArguments += ["-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
+        app.launchArguments += ["-skip-splash", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR"]
     }
 
     // MARK: - Helpers
