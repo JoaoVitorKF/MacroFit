@@ -5,11 +5,15 @@ import SwiftUI
 enum MealSheet: Identifiable {
     case new(day: Date, type: MealType? = nil)
     case edit(Meal)
+    /// Nova refeição já preenchida com outra (atalho "editar antes de adicionar").
+    case fromTemplate(Meal, day: Date, portion: Portion)
 
     var id: String {
         switch self {
         case .new(let day, let type): "new-\(day.timeIntervalSince1970)-\(type?.rawValue ?? "")"
         case .edit(let meal): "edit-\(meal.persistentModelID.hashValue)"
+        case .fromTemplate(let meal, let day, let portion):
+            "template-\(meal.persistentModelID.hashValue)-\(day.timeIntervalSince1970)-\(portion.rawValue)"
         }
     }
 
@@ -17,6 +21,7 @@ enum MealSheet: Identifiable {
         switch self {
         case .new(let day, let type): MealFormViewModel(day: day, type: type)
         case .edit(let meal): MealFormViewModel(editing: meal)
+        case .fromTemplate(let meal, let day, let portion): MealFormViewModel(day: day, template: meal, portion: portion)
         }
     }
 }
@@ -64,6 +69,24 @@ struct MealFormView: View {
                         ForEach(MealType.allCases) { type in
                             Label(type.displayName, systemImage: type.symbol).tag(type)
                         }
+                    }
+                }
+
+                // Porção: aparece ao repetir ou editar uma refeição (há valores de referência)
+                if viewModel.portionBase != nil {
+                    Section {
+                        Picker("Porção", selection: Binding(get: { viewModel.portion }, set: { viewModel.apply($0) })) {
+                            ForEach(Portion.allCases) { portion in
+                                Text(portion.shortLabel).tag(portion)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .accessibilityIdentifier("seletor-porcao")
+                    } header: {
+                        Text("Porção")
+                    } footer: {
+                        Text("Multiplica calorias e macros da refeição original.")
                     }
                 }
 

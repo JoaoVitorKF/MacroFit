@@ -1,3 +1,4 @@
+import SwiftData
 import XCTest
 @testable import MacroFit
 
@@ -155,5 +156,74 @@ final class MealLogTests: XCTestCase {
         XCTAssertEqual(MealType.suggested(for: at(16)), .snack)
         XCTAssertEqual(MealType.suggested(for: at(20)), .dinner)
         XCTAssertEqual(MealType.suggested(for: at(2)), .dinner)
+    }
+}
+
+/// Testes do registro rápido: porção, frequentes e adição/desfazer.
+final class QuickAddTests: XCTestCase {
+
+    private func meal(_ name: String, kcal: Double = 100, p: Double = 10, c: Double = 10, g: Double = 2, at seconds: TimeInterval) -> Meal {
+        let meal = Meal(name: name, type: .snack, day: .now, calories: kcal, protein: p, carbs: c, fat: g)
+        meal.createdAt = Date(timeIntervalSince1970: seconds)
+        return meal
+    }
+
+    func testScaledMacros() {
+        let base = Macros(calories: 650, protein: 52, carbs: 70, fat: 14)
+        XCTAssertEqual(base.scaled(by: 0.5), Macros(calories: 325, protein: 26, carbs: 35, fat: 7))
+        XCTAssertEqual(base.scaled(by: 1.5), Macros(calories: 975, protein: 78, carbs: 105, fat: 21))
+        // Arredonda para 1 casa: 33,3 × 0,5 = 16,65 → 16,7
+        XCTAssertEqual(Macros(calories: 0, protein: 33.3, carbs: 0, fat: 0).scaled(by: 0.5).protein, 16.7, accuracy: 0.0001)
+    }
+
+    func testFrequentOrdersByCountThenRecency() {
+        let meals = [
+            meal("Iogurte", at: 100), meal("iogurte ", at: 200), meal("Iogurte", kcal: 260, at: 300),
+            meal("Frango", at: 400), meal("Frango", at: 50),
+            meal("Pão", at: 500),
+            meal("Ovo", at: 450),
+        ]
+        let frequent = MealHistory.frequent(meals)
+        XCTAssertEqual(frequent.map(\.name), ["Iogurte", "Frango", "Pão", "Ovo"], "3× > 2× > 1× (mais recente primeiro no empate)")
+        XCTAssertEqual(frequent.first?.calories, 260, "Usa a ocorrência mais recente (valores atuais)")
+        XCTAssertEqual(MealHistory.frequent(meals, limit: 2).count, 2)
+    }
+
+    func testFormPortionScalesFromTemplate() {
+        let template = meal("Frango", kcal: 650, p: 52, c: 70, g: 14, at: 0)
+        let form = MealFormViewModel(day: .now)
+        XCTAssertNil(form.portionBase, "Refeição nova em branco não tem seletor de porção")
+
+        form.fill(from: template)
+        form.apply(.double)
+        XCTAssertEqual(form.macros, Macros(calories: 1300, protein: 104, carbs: 140, fat: 28))
+
+        form.apply(.half)
+        XCTAssertEqual(form.macros?.calories, 325, "Sempre a partir da referência, não do valor anterior")
+    }
+
+    func testTemplateInitAppliesPortion() {
+        let template = meal("Iogurte", kcal: 260, p: 35, c: 18, g: 5, at: 0)
+        let form = MealFormViewModel(day: .now, template: template, portion: .oneAndHalf)
+        XCTAssertFalse(form.isEditing)
+        XCTAssertEqual(form.portion, .oneAndHalf)
+        XCTAssertEqual(form.macros?.calories, 390)
+    }
+
+    func testQuickAddAndUndo() throws {
+        let container = try ModelContainer(for: Schema(MacroFitSchema.models), configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = ModelContext(container)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
+        let template = Meal(name: "Iogurte", type: .snack, day: yesterday, calories: 260, protein: 35, carbs: 18, fat: 5)
+        context.insert(template)
+
+        let added = MealQuickAdd.add(template, portion: .double, on: .now, in: context)
+        XCTAssertEqual(added.calories, 520)
+        XCTAssertEqual(added.type, .snack)
+        XCTAssertTrue(Calendar.current.isDateInToday(added.day))
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Meal>()), 2)
+
+        MealQuickAdd.undo(added, in: context)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Meal>()), 1, "Desfazer apaga só a cópia")
     }
 }

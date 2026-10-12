@@ -1,11 +1,17 @@
 import SwiftData
 import SwiftUI
 
-/// Aba Hoje: anel de calorias, barras de macros, resumo por refeição e o botão grande "+".
+/// Aba Hoje: anel de calorias, botão grande "+", adição rápida, barras de macros e resumo por refeição.
 struct TodayView: View {
     let profile: UserProfile
     @Environment(DaySelection.self) private var selection
+    @Environment(\.modelContext) private var context
     @State private var sheet: MealSheet?
+    /// Última refeição adicionada pelo atalho (mostra o aviso com "Desfazer").
+    @State private var quickAdded: Meal?
+    @State private var toastTimer: Task<Void, Never>?
+    /// Conta as adições rápidas para disparar a vibração de sucesso.
+    @State private var quickAddCount = 0
 
     var body: some View {
         NavigationStack {
@@ -18,7 +24,42 @@ struct TodayView: View {
             .sheet(item: $sheet) { sheet in
                 MealFormView(sheet: sheet)
             }
+            .overlay(alignment: .bottom) {
+                if let meal = quickAdded {
+                    UndoToast(
+                        title: meal.name,
+                        detail: "Adicionado · \(meal.calories.kcalText) kcal · \(meal.type.displayName)"
+                    ) {
+                        undoQuickAdd(meal)
+                    }
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .sensoryFeedback(.success, trigger: quickAddCount)
         }
+    }
+
+    // MARK: - Adição rápida
+
+    private func quickAdd(_ template: Meal, portion: Portion) {
+        let meal = MealQuickAdd.add(template, portion: portion, on: selection.day, in: context)
+        quickAddCount += 1
+        withAnimation(.spring(duration: 0.4)) { quickAdded = meal }
+
+        // O aviso some sozinho depois de 4 segundos
+        toastTimer?.cancel()
+        toastTimer = Task {
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            withAnimation { quickAdded = nil }
+        }
+    }
+
+    private func undoQuickAdd(_ meal: Meal) {
+        toastTimer?.cancel()
+        withAnimation { quickAdded = nil }
+        MealQuickAdd.undo(meal, in: context)
     }
 
     private func content(_ summary: DayLogSummary, targets: NutritionTargets) -> some View {
@@ -31,6 +72,11 @@ struct TodayView: View {
                     .card()
 
                 addButton
+
+                QuickAddBar(
+                    onAdd: { meal, portion in quickAdd(meal, portion: portion) },
+                    onCustomize: { meal in sheet = .fromTemplate(meal, day: selection.day, portion: .one) }
+                )
 
                 VStack(spacing: 18) {
                     MacroBarView(nutrient: .protein, consumed: summary.total.protein, goal: targets.protein)

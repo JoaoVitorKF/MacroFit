@@ -19,6 +19,12 @@ final class MealFormViewModel {
 
     static let maxNameLength = 60
 
+    /// Valores de referência para o seletor de porção (refeição repetida ou editada).
+    /// `nil` numa refeição nova em branco — aí o seletor não aparece.
+    private(set) var portionBase: Macros?
+    /// Porção escolhida em relação a `portionBase`.
+    private(set) var portion: Portion = .one
+
     /// Nova refeição no dia escolhido. Sem tipo informado, sugere um pela hora atual.
     init(day: Date, type: MealType? = nil) {
         self.day = day
@@ -41,6 +47,14 @@ final class MealFormViewModel {
         proteinText = NumberParser.format(meal.protein)
         carbsText = NumberParser.format(meal.carbs)
         fatText = NumberParser.format(meal.fat)
+        portionBase = meal.macros
+    }
+
+    /// Nova refeição já preenchida a partir de outra, com uma porção (atalho "editar antes de adicionar").
+    convenience init(day: Date, template: Meal, portion: Portion = .one) {
+        self.init(day: day)
+        fill(from: template)
+        apply(portion)
     }
 
     var isEditing: Bool { editing != nil }
@@ -55,6 +69,21 @@ final class MealFormViewModel {
         proteinText = NumberParser.format(template.protein)
         carbsText = NumberParser.format(template.carbs)
         fatText = NumberParser.format(template.fat)
+        portionBase = template.macros
+        portion = .one
+    }
+
+    // MARK: - Porção
+
+    /// Recalcula calorias e macros a partir dos valores de referência × porção.
+    func apply(_ newPortion: Portion) {
+        guard let base = portionBase else { return }
+        portion = newPortion
+        let scaled = base.scaled(by: newPortion.rawValue)
+        caloriesText = NumberParser.format(scaled.calories)
+        proteinText = NumberParser.format(scaled.protein)
+        carbsText = NumberParser.format(scaled.carbs)
+        fatText = NumberParser.format(scaled.fat)
     }
 
     // MARK: - Validação

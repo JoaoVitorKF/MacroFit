@@ -76,6 +76,22 @@ enum DemoData {
         for (name, type, day, kcal, protein, carbs, fat) in samples {
             context.insert(Meal(name: name, type: type, day: day, calories: kcal, protein: protein, carbs: carbs, fat: fat))
         }
+        // Histórico mais antigo (2 a 6 dias atrás) com repetições, para o "Adicionar rápido" ter frequentes.
+        // Não usa ontem nem hoje, para não mudar os totais que os testes de interface conferem.
+        let history: [(String, MealType, Double, Double, Double, Double, [Int])] = [
+            ("Iogurte com whey", .snack, 260, 35, 18, 5, [2, 3, 4, 6]),
+            ("Frango grelhado, arroz e feijão", .lunch, 650, 52, 70, 14, [2, 4, 5]),
+            ("Ovos mexidos com pão integral", .breakfast, 420, 28, 35, 18, [3, 5]),
+            ("Banana com pasta de amendoim", .snack, 290, 8, 32, 16, [2, 6]),
+        ]
+        for (name, type, kcal, protein, carbs, fat, daysAgo) in history {
+            for offset in daysAgo {
+                let day = Calendar.current.date(byAdding: .day, value: -offset, to: today) ?? today
+                let meal = Meal(name: name, type: type, day: day, calories: kcal, protein: protein, carbs: carbs, fat: fat)
+                meal.createdAt = day.addingTimeInterval(12 * 3600)
+                context.insert(meal)
+            }
+        }
         // Peso a cada 3 dias nos últimos 60 dias: de ~82,5 kg até 80 kg hoje, com pequenas oscilações
         for step in 0...20 {
             let day = Calendar.current.date(byAdding: .day, value: -3 * (20 - step), to: today) ?? today
