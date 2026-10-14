@@ -145,5 +145,10 @@ final class MealBuilderTests: XCTestCase {
         XCTAssertEqual(MealItem(food: rice, grams: 1).shortName, "Arroz")
         XCTAssertEqual(MealItem(food: beef, grams: 1).shortName, "Patinho")
         XCTAssertEqual(MealItem(food: db.food(tacoId: 410)!, grams: 1).shortName, "Frango")
+        XCTAssertEqual(MealItem(food: db.food(tacoId: 88)!, grams: 1).shortName, "Batata doce")
+        XCTAssertEqual(MealItem(food: db.food(tacoId: 561)!, grams: 1).shortName, "Feijão carioca")
+        XCTAssertEqual(MealItem(food: db.food(tacoId: 53)!, grams: 1).shortName, "Pão francês")
+        XCTAssertEqual(MealItem(food: db.food(tacoId: 488)!, grams: 1).shortName, "Ovo")
+        XCTAssertEqual(MealItem(food: db.food(tacoId: 526)!, grams: 1).shortName, "Arroz carreteiro")
     }
 }

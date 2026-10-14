@@ -22,15 +22,28 @@ struct MealItem: Codable, Hashable, Identifiable {
     /// Calorias e macros desta quantidade.
     var macros: Macros { per100g.scaled(by: grams / 100) }
 
-    /// Nome curto para títulos: "Arroz, tipo 1, cozido" → "Arroz";
-    /// "Carne, bovina, patinho, …" → "Patinho" (o corte diz mais que "Carne").
+    /// Nome curto para títulos, sem os detalhes de preparo da TACO:
+    /// "Arroz, tipo 1, cozido" → "Arroz"; "Batata, doce, cozida" → "Batata doce";
+    /// "Pão, trigo, francês" → "Pão francês"; "Carne, bovina, patinho, …" → "Patinho".
     var shortName: String {
         let parts = name.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-        if parts.count >= 3, parts[0] == "Carne" {
+        guard let first = parts.first else { return name }
+        if parts.count >= 3, first == "Carne" {
             return parts[2].prefix(1).uppercased() + parts[2].dropFirst()
         }
-        return parts.first ?? name
+        // Segunda parte só se for uma variedade de uma palavra ("doce", "carioca", "francês")
+        let variety = parts.dropFirst().first { part in
+            !Self.genericParts.contains(part.lowercased()) && !part.contains("/") && !part.contains(" ")
+        }
+        return [first, variety?.lowercased()].compactMap { $0 }.joined(separator: " ")
     }
+
+    /// Partes do nome da TACO que descrevem preparo/corte genérico (não entram no nome curto).
+    private static let genericParts: Set<String> = [
+        "cozido", "cozida", "cru", "crua", "grelhado", "grelhada", "assado", "assada", "frito", "frita",
+        "refogado", "refogada", "inteiro", "inteira", "peito", "trigo", "flocos", "tipo 1", "tipo 2",
+        "sem pele", "com pele", "sem gordura", "com gordura", "de galinha",
+    ]
 }
 
 /// Uma refeição registrada em um dia.

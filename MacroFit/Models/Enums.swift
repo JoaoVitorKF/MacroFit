@@ -121,6 +121,11 @@ enum MealType: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Com artigo, para frases: "o café da manhã", "o almoço"…
+    var withArticle: String {
+        "o " + displayName.lowercased()
+    }
+
     var symbol: String {
         switch self {
         case .breakfast: "cup.and.saucer"

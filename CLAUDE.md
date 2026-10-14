@@ -97,6 +97,24 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
   - `Weight/`: `WeightCard` (Perfil), `WeightHistoryView`, `WeightChart` (Swift Charts com `chartXSelection`), `WeightEntrySheet`
   - `Theme.swift`: cores e ícones de cada nutriente (`Nutrient`) e o modificador `.card()`
 
+## Alimentos e refeição por gramas
+- **Tabela:** `Resources/taco.json` (591 alimentos da TACO 4ª ed., por 100 g), gerado por `Tools/taco/generate_taco.py`
+  a partir de `Tools/taco/source/*.csv` (raulfdm/taco-api, MIT). Conferido com a planilha original da UNICAMP sem
+  diferenças. **Nunca invente valores nutricionais**: o que não está na TACO entra como `CustomFood` (rótulo)
+- `FoodDatabase.shared.search(_:custom:)`: busca sem acento, maiúsculas e plural. `FoodSearch.aliases` define os
+  preferidos do dia a dia ("carne" → patinho grelhado, "aipim" → mandioca). Prontos antes de crus. Alimentos próprios primeiro
+- `Meal.itemsData` (JSON de `[MealItem]`, opcional). Cada item copia os valores por 100 g do momento do registro.
+  `Meal.setItems` recalcula os totais. Refeições sem itens = digitadas à mão (modo "Digitar valores")
+- **Quanto posso comer** (`Services/MealPlanner.swift`):
+  - `budget`: o que falta no dia é dividido entre esta refeição e as não registradas (café 25 / almoço 35 / lanche 15 / jantar 25)
+  - `suggestGrams`: mínimos quadrados com limites por descida por coordenadas. Pesos: kcal 3, P 2, C 0,6, G 0,6.
+    Nunca passa das kcal; de 5 em 5 g; mínimo por alimento = 15% das kcal da refeição (20–100 g); máximo 600 g
+  - Com alimentos magros, sobra a gordura da fatia. A tela avisa ("Sobram ~X kcal, quase tudo de gordura")
+- **Texto/voz** (`Services/MealTextParser.swift`): separa por vírgula, "e", "mais", "+" e por nova quantidade.
+  Unidades: g, kg, colher (15 g), concha (100 g), fatia (25 g). Contagem (< 10) usa `unitWeights` (ovo 50 g, pão 50 g…).
+  O ditado é o microfone do próprio teclado do iOS, sem código de fala no app
+- Listas do iOS só criam as linhas visíveis: nos testes de interface, **role** (`swipeUp`) até o elemento antes de procurar
+
 ## Convenções
 - Faixas válidas: idade 14–100 (inteiro), peso 30–300 kg, altura 120–230 cm; por refeição 0–5000 kcal e 0–500 g
   por macro; nome da refeição 1–60 caracteres. O botão Salvar fica desabilitado enquanto houver campo inválido

@@ -52,14 +52,69 @@ final class FoodMealUITests: XCTestCase {
 
         addFood(search: "carne", pick: "Carne, bovina, patinho, sem gordura, grelhado")
         setGrams("140", for: "Carne, bovina, patinho, sem gordura, grelhado")
-        // 140 g de patinho = 306,6 kcal; total 562,6 → "563 kcal"
-        XCTAssertTrue(app.staticTexts["563 kcal"].waitForExistence(timeout: 3))
+        // 140 g de patinho = 306,6 kcal; total 562,6 → "563 kcal" (o total fica abaixo do quadro de sugestão)
+        let total = app.staticTexts["563 kcal"]
+        for _ in 0..<4 where !total.exists { app.swipeUp() }
+        XCTAssertTrue(total.waitForExistence(timeout: 3))
         keepScreenshot("refeicao-por-alimentos")
 
         app.buttons["Salvar"].tap()
 
         // Na tela Hoje: a meta exata é 2.345,15 kcal; 2.345,15 − 1.330 − 562,6 = 452,55 → "453"
         XCTAssertTrue(app.staticTexts["453"].waitForExistence(timeout: 5))
+    }
+
+    func testTypeMealAsText() {
+        app.buttons["Adicionar refeição"].firstMatch.tap()
+        let field = app.textFields["campo-texto-refeicao"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("200g de arroz e 150g de carne\n")
+
+        // Os dois alimentos entram com os gramas do texto
+        XCTAssertEqual(app.textFields["gramas-Arroz, tipo 1, cozido"].value as? String, "200")
+        XCTAssertEqual(app.textFields["gramas-Carne, bovina, patinho, sem gordura, grelhado"].value as? String, "150")
+        XCTAssertTrue(app.staticTexts["2 alimentos adicionados."].exists)
+        keepScreenshot("refeicao-por-texto")
+
+        // Texto com algo que não está na tabela: avisa
+        field.tap()
+        field.typeText("100g de xyzabc\n")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Não encontrei")).firstMatch.waitForExistence(timeout: 3))
+    }
+
+    func testSuggestPortionsForDinner() {
+        // Demo: café, almoço e lanche já registrados → o jantar recebe tudo o que sobra (1.015 kcal)
+        let dinnerRow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Jantar")).firstMatch
+        XCTAssertTrue(dinnerRow.waitForExistence(timeout: 5))
+        dinnerRow.tap()
+
+        addFood(search: "frango", pick: "Frango, peito, sem pele, grelhado")
+        addFood(search: "batata doce", pick: "Batata, doce, cozida")
+
+        // O quadro fica abaixo dos alimentos: rola até ele (a lista só cria as linhas visíveis)
+        let suggest = app.buttons["sugerir-quantidades"]
+        for _ in 0..<4 where !suggest.exists { app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Para o jantar sobram ~1.015 kcal"].exists, "Último jantar recebe tudo o que sobra")
+        suggest.tap()
+
+        // A refeição cabe no que sobra e aproveita bem
+        let usage = app.staticTexts.matching(NSPredicate(format: "label ENDSWITH %@", "de 1.015 kcal")).firstMatch
+        XCTAssertTrue(usage.waitForExistence(timeout: 3))
+        let used = Double(usage.label.components(separatedBy: " ").first!.replacingOccurrences(of: ".", with: "")) ?? 0
+        // Frango e batata doce quase não têm gordura: não dá para usar os 35 g de gordura da fatia,
+        // então a sugestão fica em ~690 kcal e o app avisa o que sobra
+        XCTAssertGreaterThan(used, 650, "Aproveita o que dá com esses alimentos")
+        XCTAssertLessThanOrEqual(used, 1015, "Não passa do que sobra")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Sobram ~")).firstMatch.exists, "Avisa as calorias de gordura que sobram")
+        keepScreenshot("sugestao-jantar")
+
+        // Os gramas mudaram (não são mais os 100 g iniciais)
+        for _ in 0..<4 { app.swipeDown() }
+        let chicken = app.textFields["gramas-Frango, peito, sem pele, grelhado"]
+        XCTAssertTrue(chicken.waitForExistence(timeout: 3))
+        XCTAssertNotEqual(chicken.value as? String, "100")
+        keepScreenshot("sugestao-jantar-gramas")
     }
 
     func testPlusMinusButtons() {

@@ -123,6 +123,23 @@ final class MealFormViewModel {
         items.append(ItemDraft(item: MealItem(food: food, grams: grams)))
     }
 
+    /// Adiciona os alimentos de um texto escrito ou ditado ("200g de arroz e 150g de carne").
+    /// Sem quantidade no texto, usa 100 g. Retorna quantos entraram e os trechos não encontrados.
+    @discardableResult
+    func addFromText(_ text: String, custom: [Food] = []) -> (added: Int, notFound: [String]) {
+        var added = 0
+        var notFound: [String] = []
+        for entry in MealTextParser.parse(text, custom: custom) {
+            if let food = entry.food {
+                add(food, grams: entry.grams ?? Self.defaultGrams)
+                added += 1
+            } else {
+                notFound.append(entry.query)
+            }
+        }
+        return (added, notFound)
+    }
+
     func removeItems(at offsets: IndexSet) {
         items.remove(atOffsets: offsets)
     }
@@ -147,6 +164,16 @@ final class MealFormViewModel {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].gramsText = NumberParser.format(grams)
         items[index].baseGrams = grams
+        portion = .one
+    }
+
+    /// "Quanto posso comer?": troca os gramas de todos os alimentos pela sugestão que cabe no orçamento.
+    func suggestPortions(budget: Macros) {
+        let grams = MealPlanner.suggestGrams(for: items.map(\.item.per100g), budget: budget)
+        for (index, value) in grams.enumerated() where items.indices.contains(index) {
+            items[index].gramsText = NumberParser.format(value)
+            items[index].baseGrams = value
+        }
         portion = .one
     }
 

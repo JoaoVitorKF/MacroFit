@@ -146,6 +146,8 @@ struct MealFormView: View {
     @ViewBuilder
     private var foodsSections: some View {
         Section {
+            MealTextEntry(viewModel: viewModel)
+
             ForEach($viewModel.items) { $draft in
                 MealItemRow(draft: $draft) { delta in
                     viewModel.adjustGrams(of: draft.id, by: delta)
@@ -171,6 +173,8 @@ struct MealFormView: View {
                 Text("Deslize um alimento para a esquerda para remover.")
             }
         }
+
+        MealBudgetSection(viewModel: viewModel)
 
         if let total = viewModel.itemsTotal {
             Section("Total da refeição") {
@@ -215,6 +219,59 @@ struct MealFormView: View {
                 Text("Use 0 quando o alimento não tiver aquele macro.")
             }
         }
+    }
+}
+
+/// Campo para escrever (ou ditar pelo microfone do teclado) a refeição: "200g de arroz e 150g de carne".
+private struct MealTextEntry: View {
+    @Bindable var viewModel: MealFormViewModel
+    @Query(sort: \CustomFood.name) private var customFoods: [CustomFood]
+    @State private var text = ""
+    @State private var result: (message: String, isProblem: Bool)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "text.bubble")
+                    .foregroundStyle(Color.accentColor)
+                TextField("Ex.: 200g de arroz e 150g de carne", text: $text)
+                    .submitLabel(.done)
+                    .onSubmit(submit)
+                    .accessibilityIdentifier("campo-texto-refeicao")
+                Button(action: submit) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.borderless)
+                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Adicionar alimentos do texto")
+                .accessibilityIdentifier("interpretar-texto")
+            }
+            Text(result?.message ?? "Escreva ou toque no microfone do teclado e fale a refeição.")
+                .font(.caption)
+                .foregroundStyle(result?.isProblem == true ? Color.orange : Color.secondary)
+                .accessibilityIdentifier("resultado-texto")
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func submit() {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let outcome = withAnimation {
+            viewModel.addFromText(trimmed, custom: customFoods.map(\.food))
+        }
+        var parts: [String] = []
+        if outcome.added > 0 {
+            parts.append(outcome.added == 1 ? "1 alimento adicionado." : "\(outcome.added) alimentos adicionados.")
+        }
+        if !outcome.notFound.isEmpty {
+            let names = outcome.notFound.map { "\"\($0)\"" }.joined(separator: ", ")
+            parts.append("Não encontrei \(names): use Adicionar alimento ou cadastre pelo rótulo.")
+        }
+        if parts.isEmpty { parts.append("Não entendi. Tente algo como \"150g de frango\".") }
+        result = (parts.joined(separator: " "), !outcome.notFound.isEmpty || outcome.added == 0)
+        if outcome.notFound.isEmpty && outcome.added > 0 { text = "" }
     }
 }
 

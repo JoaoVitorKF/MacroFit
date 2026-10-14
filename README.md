@@ -16,6 +16,19 @@ carboidrato e gordura, e deixa você registrar as refeições do dia para ver qu
 | **Refeições** | Refeições do dia agrupadas por tipo. Deslize para a esquerda para **editar** ou **apagar**; toque para editar |
 | **Perfil** | TMB, gasto total, meta, déficit/superávit e macros; **peso** com mini gráfico, **Registrar peso** e **Ver evolução** (gráfico com 30/90 dias/tudo: toque ou arraste para ver cada dia); seus dados com botão **Editar** |
 
+### Registrar uma refeição (por alimentos)
+1. Toque em **Adicionar refeição**. O modo **Por alimentos** já vem selecionado.
+2. Escreva o que comeu no campo do topo, por exemplo **"200g de arroz e 150g de carne"**, ou toque no
+   🎤 do teclado e **fale**. Também dá para usar **Adicionar alimento** e buscar na tabela.
+3. Ajuste os gramas (−10/+10). Calorias e macros de cada alimento e o total são calculados na hora.
+4. **Quanto posso comer?** mostra quanto sobra para esta refeição. **Sugerir quantidades** ajusta os gramas
+   de cada alimento para caber nisso, sem passar das calorias.
+
+Os valores vêm da **TACO** (Tabela Brasileira de Composição de Alimentos, 4ª ed., NEPA/UNICAMP, 2011), com 591
+alimentos por 100 g, inclusive pratos como arroz carreteiro, feijoada e estrogonofe. Funciona sem internet.
+O que não estiver na tabela (whey, produtos de marca, leite integral, que está "em reanálise" na TACO) você
+cadastra em **Cadastrar alimento pelo rótulo**. Para produtos de rótulo também existe o modo **Digitar valores**.
+
 Use as setas ‹ › no topo de Hoje ou Refeições para trocar de dia, ou toque na data para abrir o calendário.
 O dia escolhido vale para as duas abas. Ao adicionar uma refeição, toque em **Repetir refeição anterior**
 para reaproveitar algo que você já registrou. Escolha a porção (½×, 1×, 1½×, 2×) para ajustar os valores.
@@ -59,8 +72,8 @@ No topo do Xcode, escolha um simulador de iPhone (ex.: *iPhone 17*) e aperte **�
 
 ### Testes
 
-São 91 testes: 72 unitários (calculadora, validação, refeições, porções, peso, comemoração e dicas) e 19 de
-interface, que tocam na tela do simulador (onboarding, refeições, tela Hoje, adicionar rápido com Desfazer e porção,
+São 144 testes: 120 unitários (calculadora, validação, refeições, porções, peso, comemoração, dicas, tabela de
+alimentos, sugestão de gramas e leitura de texto) e 24 de interface, que tocam na tela do simulador (onboarding, refeições, tela Hoje, adicionar rápido com Desfazer e porção,
 registro de peso, comemoração e dica).
 
 **⌘U** no Xcode, ou pelo terminal:
@@ -132,3 +145,4 @@ MacroFitUITests/           # XCUITest: fluxos na tela (usam dados de demonstraç
 ```
 
 As fórmulas estão documentadas no `CLAUDE.md` e em `Services/NutritionCalculator.swift`.
+A tabela de alimentos é gerada por `Tools/taco/generate_taco.py`; veja `Tools/taco/README.md`.
