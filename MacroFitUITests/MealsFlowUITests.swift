@@ -112,6 +112,8 @@ final class MealsFlowUITests: XCTestCase {
         XCTAssertTrue(save.waitForExistence(timeout: 5))
         XCTAssertFalse(save.isEnabled)
 
+        // Produto de rótulo: digitar os valores
+        app.segmentedControls["modo-entrada"].buttons["Digitar valores"].tap()
         type("Salada de atum", into: "campo-nome")
         type("300", into: "campo-calories")
         type("30", into: "campo-protein")

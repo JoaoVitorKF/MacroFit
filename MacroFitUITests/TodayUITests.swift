@@ -13,6 +13,9 @@ final class TodayUITests: XCTestCase {
     }
 
     private func fillMeal(name: String, kcal: String) {
+        let manual = app.segmentedControls["modo-entrada"].buttons["Digitar valores"]
+        XCTAssertTrue(manual.waitForExistence(timeout: 5))
+        manual.tap()
         let nameField = app.textFields["campo-nome"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 5))
         nameField.tap()

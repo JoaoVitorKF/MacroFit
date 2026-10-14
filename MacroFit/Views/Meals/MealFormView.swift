@@ -51,13 +51,27 @@ struct MealFormView: View {
                     }
                 }
 
+                Section {
+                    Picker("Como registrar", selection: $viewModel.mode) {
+                        Text("Por alimentos").tag(MealFormViewModel.EntryMode.foods)
+                        Text("Digitar valores").tag(MealFormViewModel.EntryMode.manual)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .accessibilityIdentifier("modo-entrada")
+                } footer: {
+                    Text(viewModel.mode == .foods
+                         ? "Escolha os alimentos e os gramas: calorias e macros são calculados pela tabela TACO."
+                         : "Para produtos com rótulo: digite calorias e macros da porção que você comeu.")
+                }
+
                 Section("Refeição") {
                     VStack(alignment: .leading, spacing: 4) {
-                        TextField("Nome (ex.: frango com arroz)", text: $viewModel.name)
+                        TextField(namePlaceholder, text: $viewModel.name)
                             .textInputAutocapitalization(.sentences)
                             .accessibilityIdentifier("campo-nome")
                             .submitLabel(.done)
-                        // Só mostra o erro de nome vazio depois que algo foi digitado e apagado
+                        // Só mostra o erro de nome depois que algo foi digitado
                         if !viewModel.name.isEmpty, let error = viewModel.nameError {
                             Text(error)
                                 .font(.caption)
@@ -72,8 +86,8 @@ struct MealFormView: View {
                     }
                 }
 
-                // Porção: aparece ao repetir ou editar uma refeição (há valores de referência)
-                if viewModel.portionBase != nil {
+                // Porção: aparece ao repetir ou editar uma refeição
+                if viewModel.showsPortion {
                     Section {
                         Picker("Porção", selection: Binding(get: { viewModel.portion }, set: { viewModel.apply($0) })) {
                             ForEach(Portion.allCases) { portion in
@@ -86,39 +100,24 @@ struct MealFormView: View {
                     } header: {
                         Text("Porção")
                     } footer: {
-                        Text("Multiplica calorias e macros da refeição original.")
+                        Text(viewModel.mode == .foods
+                             ? "Multiplica os gramas de todos os alimentos."
+                             : "Multiplica calorias e macros da refeição original.")
                     }
                 }
 
-                Section {
-                    NumberField(field: .calories, text: $viewModel.caloriesText)
-                    NumberField(field: .protein, text: $viewModel.proteinText)
-                    NumberField(field: .carbs, text: $viewModel.carbsText)
-                    NumberField(field: .fat, text: $viewModel.fatText)
-
-                    if let estimated = viewModel.caloriesFromMacros,
-                       viewModel.caloriesText.isEmpty || viewModel.caloriesLookInconsistent {
-                        Button {
-                            viewModel.useCaloriesFromMacros()
-                        } label: {
-                            Label("Usar \(estimated.kcalText) kcal calculadas pelos macros", systemImage: "function")
-                                .font(.subheadline)
-                        }
-                    }
-                } header: {
-                    Text("Valores")
-                } footer: {
-                    if viewModel.caloriesLookInconsistent, let estimated = viewModel.caloriesFromMacros {
-                        Text("As calorias digitadas não batem com os macros (≈ \(estimated.kcalText) kcal). Confira o rótulo.")
-                    } else {
-                        Text("Use 0 quando o alimento não tiver aquele macro.")
-                    }
+                switch viewModel.mode {
+                case .foods:
+                    foodsSections
+                case .manual:
+                    manualSection
                 }
             }
             .scrollDismissesKeyboard(.interactively)
             .keyboardDoneButton()
             .navigationTitle(viewModel.isEditing ? "Editar refeição" : "Nova refeição")
             .navigationBarTitleDisplayMode(.inline)
+            .animation(.default, value: viewModel.mode)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }
@@ -133,6 +132,151 @@ struct MealFormView: View {
                 }
             }
         }
+    }
+
+    private var namePlaceholder: String {
+        if viewModel.mode == .foods {
+            return viewModel.autoName.isEmpty ? "Nome (opcional)" : viewModel.autoName
+        }
+        return "Nome (ex.: frango com arroz)"
+    }
+
+    // MARK: - Por alimentos
+
+    @ViewBuilder
+    private var foodsSections: some View {
+        Section {
+            ForEach($viewModel.items) { $draft in
+                MealItemRow(draft: $draft) { delta in
+                    viewModel.adjustGrams(of: draft.id, by: delta)
+                }
+            }
+            .onDelete { viewModel.removeItems(at: $0) }
+
+            NavigationLink {
+                FoodPickerView { food in
+                    viewModel.add(food)
+                }
+            } label: {
+                Label("Adicionar alimento", systemImage: "plus.circle.fill")
+                    .fontWeight(.semibold)
+            }
+            .accessibilityIdentifier("adicionar-alimento")
+        } header: {
+            Text("Alimentos")
+        } footer: {
+            if !viewModel.items.isEmpty, let error = viewModel.itemsError {
+                Text(error).foregroundStyle(.red)
+            } else if !viewModel.items.isEmpty {
+                Text("Deslize um alimento para a esquerda para remover.")
+            }
+        }
+
+        if let total = viewModel.itemsTotal {
+            Section("Total da refeição") {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(total.calories.kcalText) kcal")
+                        .font(.title2.bold().monospacedDigit())
+                        .contentTransition(.numericText())
+                    Spacer()
+                    MacroLine(macros: total)
+                }
+                .animation(.default, value: total)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("total-refeicao")
+            }
+        }
+    }
+
+    // MARK: - Digitar valores
+
+    private var manualSection: some View {
+        Section {
+            NumberField(field: .calories, text: $viewModel.caloriesText)
+            NumberField(field: .protein, text: $viewModel.proteinText)
+            NumberField(field: .carbs, text: $viewModel.carbsText)
+            NumberField(field: .fat, text: $viewModel.fatText)
+
+            if let estimated = viewModel.caloriesFromMacros,
+               viewModel.caloriesText.isEmpty || viewModel.caloriesLookInconsistent {
+                Button {
+                    viewModel.useCaloriesFromMacros()
+                } label: {
+                    Label("Usar \(estimated.kcalText) kcal calculadas pelos macros", systemImage: "function")
+                        .font(.subheadline)
+                }
+            }
+        } header: {
+            Text("Valores")
+        } footer: {
+            if viewModel.caloriesLookInconsistent, let estimated = viewModel.caloriesFromMacros {
+                Text("As calorias digitadas não batem com os macros (≈ \(estimated.kcalText) kcal). Confira o rótulo.")
+            } else {
+                Text("Use 0 quando o alimento não tiver aquele macro.")
+            }
+        }
+    }
+}
+
+/// Um alimento na refeição: nome, gramas (com −10/+10) e quanto isso dá em calorias e proteína.
+private struct MealItemRow: View {
+    @Binding var draft: MealFormViewModel.ItemDraft
+    let onAdjust: (Double) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(draft.item.name)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(2)
+
+            HStack(spacing: 8) {
+                // Estilo explícito: vários botões na mesma linha de Form
+                Button { onAdjust(-10) } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Menos 10 gramas de \(draft.item.shortName)")
+
+                TextField("100", text: $draft.gramsText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                    .font(.body.monospacedDigit())
+                    .frame(width: 70)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("gramas-\(draft.item.name)")
+                Text("g")
+                    .foregroundStyle(.secondary)
+
+                Button { onAdjust(10) } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Mais 10 gramas de \(draft.item.shortName)")
+
+                Spacer(minLength: 4)
+
+                if let macros = draft.macros {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(macros.calories.kcalText) kcal")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .contentTransition(.numericText())
+                        Text("P \(macros.protein.gramsText) · C \(macros.carbs.gramsText) · G \(macros.fat.gramsText)")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("valores-\(draft.item.name)")
+                } else {
+                    Text("1 a 2000 g")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+            .animation(.default, value: draft.gramsText)
+        }
+        .padding(.vertical, 4)
     }
 }
 

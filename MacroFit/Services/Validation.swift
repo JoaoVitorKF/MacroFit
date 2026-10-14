@@ -10,6 +10,8 @@ enum NumericField {
     case protein
     case carbs
     case fat
+    /// Quantidade de um alimento na refeição.
+    case grams
 
     var label: String {
         switch self {
@@ -20,6 +22,7 @@ enum NumericField {
         case .protein: "Proteína"
         case .carbs: "Carboidrato"
         case .fat: "Gordura"
+        case .grams: "Quantidade"
         }
     }
 
@@ -29,7 +32,7 @@ enum NumericField {
         case .weight: "kg"
         case .height: "cm"
         case .calories: "kcal"
-        case .protein, .carbs, .fat: "g"
+        case .protein, .carbs, .fat, .grams: "g"
         }
     }
 
@@ -41,6 +44,7 @@ enum NumericField {
         case .height: 120...230
         case .calories: 0...5000
         case .protein, .carbs, .fat: 0...500
+        case .grams: 1...2000
         }
     }
 

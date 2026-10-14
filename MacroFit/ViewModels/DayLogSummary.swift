@@ -31,16 +31,29 @@ struct DayLogSummary {
 enum MealQuickAdd {
     @discardableResult
     static func add(_ template: Meal, portion: Portion = .one, on day: Date, in context: ModelContext) -> Meal {
-        let macros = template.macros.scaled(by: portion.rawValue)
-        let meal = Meal(
-            name: template.name,
-            type: template.type,
-            day: day,
-            calories: macros.calories,
-            protein: macros.protein,
-            carbs: macros.carbs,
-            fat: macros.fat
-        )
+        let meal: Meal
+        let templateItems = template.items
+        if templateItems.isEmpty {
+            let macros = template.macros.scaled(by: portion.rawValue)
+            meal = Meal(
+                name: template.name,
+                type: template.type,
+                day: day,
+                calories: macros.calories,
+                protein: macros.protein,
+                carbs: macros.carbs,
+                fat: macros.fat
+            )
+        } else {
+            // Montada por alimentos: copia os itens com os gramas × porção (totais recalculados)
+            let items = templateItems.map { item in
+                var copy = item
+                copy.id = UUID()
+                copy.grams = max((item.grams * portion.rawValue).rounded(), 1)
+                return copy
+            }
+            meal = Meal(name: template.name, type: template.type, day: day, items: items)
+        }
         context.insert(meal)
         try? context.save()
         return meal

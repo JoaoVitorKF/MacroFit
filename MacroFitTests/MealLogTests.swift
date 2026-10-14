@@ -62,6 +62,8 @@ final class MealLogTests: XCTestCase {
 
     func testMealFormValidation() {
         let form = MealFormViewModel(day: .now)
+        XCTAssertEqual(form.mode, .foods, "Refeição nova começa por alimentos")
+        form.mode = .manual
         form.name = "  Omelete  "
         form.caloriesText = "350"
         form.proteinText = "24"

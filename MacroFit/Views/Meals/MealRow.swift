@@ -16,6 +16,13 @@ struct MealRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(meal.name)
                     .lineLimit(1)
+                // Refeição montada por alimentos: mostra os gramas de cada um
+                if !meal.items.isEmpty {
+                    Text(meal.itemsSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
                 MacroLine(macros: meal.macros)
             }
             Spacer()

@@ -1,0 +1,101 @@
+import XCTest
+
+/// Montar refeição por alimentos e gramas (modo demo: faltam 1.015 kcal hoje).
+final class FoodMealUITests: XCTestCase {
+
+    private var app: XCUIApplication!
+
+    override func setUp() {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments += ["-skip-splash", "-AppleLanguages", "(pt-BR)", "-AppleLocale", "pt_BR", "-demo"]
+        app.launch()
+    }
+
+    private func keepScreenshot(_ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    /// Busca e escolhe um alimento na tela "Adicionar alimento".
+    private func addFood(search: String, pick name: String) {
+        app.buttons["adicionar-alimento"].tap()
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText(search)
+        let food = app.buttons["alimento-\(name)"]
+        XCTAssertTrue(food.waitForExistence(timeout: 5), "\(name) aparece ao buscar \"\(search)\"")
+        food.tap()
+    }
+
+    /// Troca os gramas de um alimento (dois toques selecionam o número).
+    private func setGrams(_ grams: String, for name: String) {
+        let field = app.textFields["gramas-\(name)"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.doubleTap()
+        field.typeText(grams)
+        app.toolbars.buttons["OK"].tap()
+    }
+
+    func testBuildMealFromFoodsAndGrams() {
+        app.buttons["Adicionar refeição"].firstMatch.tap()
+        XCTAssertTrue(app.segmentedControls["modo-entrada"].buttons["Por alimentos"].waitForExistence(timeout: 5))
+
+        addFood(search: "arroz", pick: "Arroz, tipo 1, cozido")
+        // 100 g de arroz = 128 kcal
+        XCTAssertTrue(app.staticTexts["128 kcal"].waitForExistence(timeout: 3))
+        setGrams("200", for: "Arroz, tipo 1, cozido")
+        XCTAssertTrue(app.staticTexts["256 kcal"].waitForExistence(timeout: 3), "200 g de arroz = 256 kcal")
+
+        addFood(search: "carne", pick: "Carne, bovina, patinho, sem gordura, grelhado")
+        setGrams("140", for: "Carne, bovina, patinho, sem gordura, grelhado")
+        // 140 g de patinho = 306,6 kcal; total 562,6 → "563 kcal"
+        XCTAssertTrue(app.staticTexts["563 kcal"].waitForExistence(timeout: 3))
+        keepScreenshot("refeicao-por-alimentos")
+
+        app.buttons["Salvar"].tap()
+
+        // Na tela Hoje: a meta exata é 2.345,15 kcal; 2.345,15 − 1.330 − 562,6 = 452,55 → "453"
+        XCTAssertTrue(app.staticTexts["453"].waitForExistence(timeout: 5))
+    }
+
+    func testPlusMinusButtons() {
+        app.buttons["Adicionar refeição"].firstMatch.tap()
+        addFood(search: "frango", pick: "Frango, peito, sem pele, grelhado")
+        // 100 g = 159 kcal; +10 → 110 g = 174,9 → "175 kcal"
+        app.buttons["Mais 10 gramas de Frango"].tap()
+        XCTAssertEqual(app.textFields["gramas-Frango, peito, sem pele, grelhado"].value as? String, "110")
+        XCTAssertTrue(app.staticTexts["175 kcal"].waitForExistence(timeout: 3))
+    }
+
+    func testCustomFoodFromLabel() {
+        app.buttons["Adicionar refeição"].firstMatch.tap()
+        app.buttons["adicionar-alimento"].tap()
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        searchField.tap()
+        searchField.typeText("whey")
+        app.buttons["Cadastrar alimento pelo rótulo"].tap()
+
+        // Rótulo: porção de 30 g = 120 kcal, 24 g proteína, 3 g carbo, 1,5 g gordura
+        let fields: [(String, String)] = [("campo-grams", "30"), ("campo-calories", "120"), ("campo-protein", "24"), ("campo-carbs", "3"), ("campo-fat", "1,5")]
+        for (identifier, value) in fields {
+            let field = app.textFields[identifier]
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            field.doubleTap()
+            field.typeText(value)
+            app.toolbars.buttons["OK"].tap()
+        }
+        XCTAssertTrue(app.staticTexts["400 kcal · P 80 g · C 10 g · G 5 g"].waitForExistence(timeout: 3), "Convertido para 100 g")
+        keepScreenshot("alimento-proprio")
+        app.navigationBars["Novo alimento"].buttons["Salvar"].tap()
+
+        // Volta para a refeição já com o alimento novo (100 g = 400 kcal)
+        XCTAssertTrue(app.textFields["gramas-Whey"].waitForExistence(timeout: 5))
+        setGrams("30", for: "Whey")
+        XCTAssertTrue(app.staticTexts["120 kcal"].waitForExistence(timeout: 3))
+    }
+}
