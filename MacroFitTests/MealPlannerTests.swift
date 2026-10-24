@@ -104,6 +104,144 @@ final class MealPlannerTests: XCTestCase {
         XCTAssertEqual(grams, [20, 20])
     }
 
+    // MARK: - Quantidades fixas e unidades
+
+    func testFixedFoodKeepsItsGramsAndCountsInTheBudget() {
+        // Jantar com 1.015 kcal: 300 g de arroz ditos no texto (384 kcal) ficam; o patinho cabe no resto
+        let budget = Macros(calories: 1015, protein: 45, carbs: 100, fat: 30)
+        let foods = [per100(3), per100(377)]
+        let grams = MealPlanner.suggestGrams(for: foods, budget: budget, fixed: [300, nil])
+        XCTAssertEqual(grams[0], 300)
+        let total = MealPlanner.total(of: foods, grams: grams)
+        XCTAssertLessThanOrEqual(total.calories, budget.calories)
+        XCTAssertGreaterThan(grams[1], 100, "Sobram ~630 kcal para o patinho: \(grams[1]) g")
+    }
+
+    func testAllFixedIsUntouched() {
+        let grams = MealPlanner.suggestGrams(for: [per100(3), per100(377)], budget: .zero, fixed: [150, 120])
+        XCTAssertEqual(grams, [150, 120])
+    }
+
+    func testFixedOverBudgetLeavesMinimumForTheRest() {
+        // 600 g de arroz já passam das 500 kcal: o feijão fica no mínimo
+        let budget = Macros(calories: 500, protein: 30, carbs: 60, fat: 15)
+        let grams = MealPlanner.suggestGrams(for: [per100(3), per100(561)], budget: budget, fixed: [600, nil])
+        XCTAssertEqual(grams, [600, MealPlanner.minGrams])
+    }
+
+    func testCountedFoodsBecomeWholeUnits() {
+        // Café com ovo e pão francês: unidades inteiras, sem passar das calorias
+        let budget = MealPlanner.budget(targets: targets, consumedByOthers: .zero, loggedTypes: [], for: .breakfast)
+        let foods = [per100(488), per100(53), per100(182)] // ovo cozido, pão francês, banana prata
+        let units = [488, 53, 182].map { FoodUnits.byTacoId[$0] }
+        let grams = MealPlanner.suggestGrams(for: foods, budget: budget, fixed: [nil, nil, nil], units: units)
+        XCTAssertEqual(grams[0].truncatingRemainder(dividingBy: 50), 0, "Ovos inteiros: \(grams[0]) g")
+        XCTAssertEqual(grams[1].truncatingRemainder(dividingBy: 50), 0, "Pães inteiros: \(grams[1]) g")
+        XCTAssertEqual(grams[2].truncatingRemainder(dividingBy: 90), 0, "Bananas inteiras: \(grams[2]) g")
+        XCTAssertTrue(grams.allSatisfy { $0 > 0 })
+        XCTAssertLessThanOrEqual(MealPlanner.total(of: foods, grams: grams).calories, budget.calories)
+    }
+
+    func testUnitsRoundAroundTheOtherFoods() {
+        // Ovos (contados) com aveia (por gramas): a aveia se ajusta em volta dos ovos inteiros
+        let budget = Macros(calories: 450, protein: 30, carbs: 45, fat: 15)
+        let foods = [per100(488), per100(7)]
+        let grams = MealPlanner.suggestGrams(for: foods, budget: budget, fixed: [nil, nil], units: [FoodUnits.byTacoId[488], nil])
+        XCTAssertEqual(grams[0].truncatingRemainder(dividingBy: 50), 0)
+        XCTAssertEqual(grams[1].truncatingRemainder(dividingBy: 5), 0)
+        XCTAssertLessThanOrEqual(MealPlanner.total(of: foods, grams: grams).calories, 450)
+    }
+
+    func testAtLeastOneUnit() {
+        // Quase nada sobrando: ainda assim 1 ovo, não 0
+        let grams = MealPlanner.suggestGrams(for: [per100(488)], budget: Macros(calories: 30, protein: 3, carbs: 1, fat: 2), fixed: [nil], units: [FoodUnits.byTacoId[488]])
+        XCTAssertEqual(grams, [50])
+    }
+
+    func testUnitsHaveAReasonableMaximum() {
+        // Jantar com 1.015 kcal e muito carbo sobrando: o pão para em 3, mesmo cabendo mais
+        let budget = Macros(calories: 1015, protein: 45, carbs: 141, fat: 35)
+        let foods = [per100(488), per100(53)]
+        let units = [488, 53].map { FoodUnits.byTacoId[$0] }
+        let grams = MealPlanner.suggestGrams(for: foods, budget: budget, fixed: [100, nil], units: units)
+        XCTAssertEqual(grams[0], 100, "2 ovos ditos ficam")
+        XCTAssertLessThanOrEqual(grams[1], 150, "No máximo 3 pães: \(grams[1]) g")
+    }
+
+    func testFoodUnitsDescription() {
+        let egg = FoodUnits.byTacoId[488]!
+        XCTAssertEqual(egg.describe(grams: 100), "2 ovos")
+        XCTAssertEqual(egg.describe(grams: 50), "1 ovo")
+        XCTAssertEqual(egg.describe(grams: 75), "1,5 ovos")
+        XCTAssertNil(egg.describe(grams: 10))
+        XCTAssertEqual(FoodUnits.unit(forFoodId: "taco-53")?.plural, "pães")
+        XCTAssertNil(FoodUnits.unit(forFoodId: "taco-3"), "Arroz é por gramas")
+        XCTAssertNil(FoodUnits.unit(forFoodId: "custom-\(UUID().uuidString)"))
+        XCTAssertNil(FoodUnits.unit(forFoodId: "taco-209"), "Suco de laranja não é contado")
+    }
+
+    // MARK: - Formulário: texto, cadeado e reequilíbrio
+
+    func testTextWithoutQuantitiesGetsSuggestedGrams() {
+        let form = MealFormViewModel(day: .now, type: .lunch)
+        let budget = MealPlanner.budget(targets: targets, consumedByOthers: .zero, loggedTypes: [], for: .lunch)
+        let outcome = form.addFromText("arroz, feijão e frango", budget: budget)
+        XCTAssertEqual(outcome.added, 3)
+        XCTAssertEqual(outcome.suggested, 3)
+        XCTAssertFalse(form.items.contains { $0.isLocked })
+        XCTAssertNotEqual(form.items.map(\.grams), [100, 100, 100], "Não fica nos 100 g padrão")
+        XCTAssertLessThanOrEqual(form.itemsTotal!.calories, budget.calories)
+    }
+
+    func testTextQuantitiesAreLocked() {
+        let form = MealFormViewModel(day: .now, type: .breakfast)
+        let budget = Macros(calories: 500, protein: 35, carbs: 50, fat: 15)
+        let outcome = form.addFromText("2 ovos e pão", budget: budget)
+        XCTAssertEqual(outcome.suggested, 1)
+        XCTAssertEqual(form.items[0].grams, 100, "2 ovos = 100 g, como dito")
+        XCTAssertTrue(form.items[0].isLocked)
+        XCTAssertFalse(form.items[1].isLocked)
+        XCTAssertEqual(form.items[1].grams!.truncatingRemainder(dividingBy: 50), 0, "Pão francês inteiro")
+
+        // A sugestão do botão também respeita o cadeado
+        form.suggestPortions(budget: Macros(calories: 300, protein: 20, carbs: 30, fat: 10))
+        XCTAssertEqual(form.items[0].grams, 100)
+    }
+
+    func testTextKeepsItemsAlreadyInTheMeal() {
+        let form = MealFormViewModel(day: .now, type: .lunch)
+        form.add(db.food(tacoId: 3)!, grams: 250)
+        let budget = Macros(calories: 800, protein: 50, carbs: 90, fat: 25)
+        form.addFromText("frango", budget: budget)
+        XCTAssertEqual(form.items[0].grams, 250, "O arroz que já estava não muda")
+        XCTAssertLessThanOrEqual(form.itemsTotal!.calories, 800)
+    }
+
+    func testTextWithoutBudgetUsesDefaultGrams() {
+        let form = MealFormViewModel(day: .now)
+        let outcome = form.addFromText("arroz")
+        XCTAssertEqual(outcome.suggested, 0)
+        XCTAssertEqual(form.items[0].grams, MealFormViewModel.defaultGrams)
+    }
+
+    func testAdjustLocksAndRebalances() {
+        let form = MealFormViewModel(day: .now, type: .lunch)
+        let budget = MealPlanner.budget(targets: targets, consumedByOthers: .zero, loggedTypes: [], for: .lunch)
+        form.addFromText("arroz e patinho", budget: budget)
+        let riceBefore = form.items[0].grams!
+        let beefBefore = form.items[1].grams!
+
+        // Mais arroz: o arroz trava e o patinho diminui para continuar cabendo
+        for _ in 0..<5 { form.adjustAndRebalance(form.items[0].id, by: 10, budget: budget) }
+        XCTAssertEqual(form.items[0].grams, riceBefore + 50)
+        XCTAssertTrue(form.items[0].isLocked)
+        XCTAssertLessThan(form.items[1].grams!, beefBefore)
+        XCTAssertLessThanOrEqual(form.itemsTotal!.calories, budget.calories)
+
+        form.toggleLock(form.items[0].id)
+        XCTAssertFalse(form.items[0].isLocked)
+    }
+
     func testEmptyFoods() {
         XCTAssertEqual(MealPlanner.suggestGrams(for: [], budget: Macros(calories: 500, protein: 30, carbs: 50, fat: 10)), [])
     }

@@ -126,6 +126,16 @@ enum MealType: String, CaseIterable, Identifiable, Codable {
         "o " + displayName.lowercased()
     }
 
+    /// Com "no", para botões: "no café da manhã", "no almoço"…
+    var withIn: String {
+        "no " + displayName.lowercased()
+    }
+
+    /// Nome curto para seletores apertados: "Café", "Almoço"…
+    var shortName: String {
+        self == .breakfast ? "Café" : displayName
+    }
+
     var symbol: String {
         switch self {
         case .breakfast: "cup.and.saucer"

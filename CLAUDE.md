@@ -45,6 +45,7 @@ xcrun simctl launch booted com.joaovitor.macrofit -demo-over         # meta esto
 # extras: -demo-tab N (0 Hoje, 1 Refeições, 2 Perfil) · -demo-form (formulário de refeição)
 #         -demo-weight (abre a evolução do peso) · -demo-select (gráfico com um dia já selecionado)
 #         -skip-splash (pula a tela de carregamento; os testes de interface sempre usam)
+#         -demo-plan "2 ovos e pão" (abre o "O que vou comer?" com esse texto)
 xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /caminho/print.png
 ```
 Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015, com 115 de 160 g de proteína. Há
@@ -110,6 +111,17 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
   - `suggestGrams`: mínimos quadrados com limites por descida por coordenadas. Pesos: kcal 3, P 2, C 0,6, G 0,6.
     Nunca passa das kcal; de 5 em 5 g; mínimo por alimento = 15% das kcal da refeição (20–100 g); máximo 600 g
   - Com alimentos magros, sobra a gordura da fatia. A tela avisa ("Sobram ~X kcal, quase tudo de gordura")
+  - `suggestGrams(for:budget:fixed:units:)`: `fixed` = gramas que o usuário decidiu (ficam e contam no orçamento);
+    `units` = alimentos contados (`Services/FoodUnits.swift`, por número da TACO: ovo 50 g, pão francês 50 g, fatia 25 g,
+    banana 90 g…). Contados viram unidades inteiras, de 1 até `maxCount` (ovo 4, fatia 4, pão 3, fruta/pote/hambúrguer 2),
+    e os outros são recalculados em volta. O limite existe porque sem ele o jantar virava "5 pães"
+  - **Cadeado** (`ItemDraft.isLocked`): quantidade dita no texto ("2 ovos") ou mexida no − / + do "O que vou comer?".
+    A sugestão não muda itens travados; tocar no cadeado destrava
+- **O que vou comer?** (`Views/Meals/WhatToEatView.swift`, aberto pelo `WhatToEatCard` da tela Hoje): o usuário escreve ou
+  dita os alimentos e já vê os gramas que cabem, com tipo de refeição (trocar recalcula), "≈ 2 ovos", total, barra de uso e
+  "Registrar no jantar". Usa o próprio `MealFormViewModel`. O orçamento vem do `MealBudgetReader` (mesmo cálculo do formulário)
+- No formulário, o texto sem quantidade também recebe os gramas que cabem (sem mexer nos alimentos que já estavam);
+  sem perfil/orçamento, entra com 100 g
 - **Texto/voz** (`Services/MealTextParser.swift`): separa por vírgula, "e", "mais", "+" e por nova quantidade.
   Unidades: g, kg, colher (15 g), concha (100 g), fatia (25 g). Contagem (< 10) usa `unitWeights` (ovo 50 g, pão 50 g…).
   O ditado é o microfone do próprio teclado do iOS, sem código de fala no app
@@ -131,7 +143,9 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
   Texto ou ícone *sobre* o destaque (botões `.borderedProminent`) usa `Color.accentForeground`: branco no claro e
   **preto no escuro**, porque branco sobre amarelo fica ilegível. Contraste de 6,5:1 e 13,9:1. Botão desabilitado volta ao `.secondary`
 - Passar da meta de calorias deixa o anel **vermelho**. Laranja se confundia com o amarelo do modo escuro
-- O botão "+ Adicionar refeição" da tela Hoje fica **no fluxo**, logo abaixo do anel. Flutuante, ele cobria as barras de macros
+- O botão "+ Adicionar refeição" da tela Hoje fica **no fluxo**, logo abaixo do anel. Flutuante, ele cobria as barras de macros.
+  Logo abaixo dele vem o card "O que vai comer?", e a faixa de atalhos fica rente à barra de abas: testes que arrastam
+  os atalhos rolam a tela antes
 - Passar da meta de proteína mostra "Meta atingida (+X g)" sem cor de alerta; nos outros macros e nas calorias, o aviso é laranja
 - **Botões dentro de linha de `List`/`Form`:** se houver mais de um na mesma linha, cada um precisa de
   `.buttonStyle(.borderless/.plain)`. Com o estilo padrão, um toque dispara todos (o `DaySelector` teve esse bug, e

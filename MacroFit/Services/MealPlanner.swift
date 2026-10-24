@@ -117,6 +117,56 @@ enum MealPlanner {
         return grams.map { max((($0 / step).rounded(.down)) * step, minGrams) }
     }
 
+    /// Como `suggestGrams(for:budget:)`, mas respeitando o que o usuário já decidiu:
+    /// - `fixed[i]` não nulo: o alimento fica com esses gramas ("2 ovos" ditos no texto, um ajuste à mão)
+    ///   e o resto é sugerido com o que sobra do orçamento depois dele.
+    /// - `units[i]` não nulo: alimento contado (ovo, pão francês…). A sugestão vira unidades inteiras
+    ///   (de uma até `maxCount`) e os outros alimentos são recalculados em volta delas.
+    static func suggestGrams(for foods: [Macros], budget: Macros, fixed: [Double?], units: [FoodUnit?] = []) -> [Double] {
+        guard !foods.isEmpty else { return [] }
+        var fixed = foods.indices.map { fixed.indices.contains($0) ? fixed[$0] : nil }
+        let units = foods.indices.map { units.indices.contains($0) ? units[$0] : nil }
+
+        var grams = solve(foods, budget: budget, fixed: fixed)
+
+        let counted = foods.indices.filter { fixed[$0] == nil && (units[$0]?.grams ?? 0) > 0 }
+        guard !counted.isEmpty else { return grams }
+        for i in counted {
+            let unit = units[i]!
+            fixed[i] = min(max((grams[i] / unit.grams).rounded(), 1), max(unit.maxCount, 1)) * unit.grams
+        }
+        grams = solve(foods, budget: budget, fixed: fixed)
+
+        // Arredondar para cima pode passar das calorias: tira uma unidade de quem tem mais, até caber
+        for _ in 0..<50 {
+            guard total(of: foods, grams: grams).calories > budget.calories,
+                  let i = counted.filter({ fixed[$0]! > units[$0]!.grams })
+                      .max(by: { fixed[$0]! / units[$0]!.grams < fixed[$1]! / units[$1]!.grams })
+            else { break }
+            fixed[i]! -= units[i]!.grams
+            grams = solve(foods, budget: budget, fixed: fixed)
+        }
+        return grams
+    }
+
+    /// Sugere os alimentos sem gramas fixos com o orçamento que sobra depois dos fixos.
+    private static func solve(_ foods: [Macros], budget: Macros, fixed: [Double?]) -> [Double] {
+        let fixedTotal = foods.indices.reduce(Macros.zero) { sum, i in
+            fixed[i].map { sum + foods[i].scaled(by: $0 / 100) } ?? sum
+        }
+        let remaining = Macros(
+            calories: max(budget.calories - fixedTotal.calories, 0),
+            protein: max(budget.protein - fixedTotal.protein, 0),
+            carbs: max(budget.carbs - fixedTotal.carbs, 0),
+            fat: max(budget.fat - fixedTotal.fat, 0)
+        )
+        let free = foods.indices.filter { fixed[$0] == nil }
+        let suggested = suggestGrams(for: free.map { foods[$0] }, budget: remaining)
+        var grams = foods.indices.map { fixed[$0] ?? 0 }
+        for (position, i) in free.enumerated() { grams[i] = suggested[position] }
+        return grams
+    }
+
     /// Força com que cada alimento é puxado para 100 g. Fraca: só evita que alimentos quase sem
     /// calorias (alface) disparem; o resto é decidido pelas metas.
     static let regularizationWeight = 0.01

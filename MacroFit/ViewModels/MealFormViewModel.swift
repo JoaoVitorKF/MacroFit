@@ -21,6 +21,9 @@ final class MealFormViewModel {
         var gramsText: String
         /// Gramas de referência para o seletor de porção (½×, 2×…).
         var baseGrams: Double
+        /// Quantidade decidida pelo usuário ("2 ovos" no texto, ajuste no "O que vou comer?"):
+        /// a sugestão de gramas não mexe nela.
+        var isLocked = false
 
         init(item: MealItem) {
             self.item = item
@@ -123,21 +126,41 @@ final class MealFormViewModel {
         items.append(ItemDraft(item: MealItem(food: food, grams: grams)))
     }
 
-    /// Adiciona os alimentos de um texto escrito ou ditado ("200g de arroz e 150g de carne").
-    /// Sem quantidade no texto, usa 100 g. Retorna quantos entraram e os trechos não encontrados.
-    @discardableResult
-    func addFromText(_ text: String, custom: [Food] = []) -> (added: Int, notFound: [String]) {
+    /// Resultado de `addFromText`.
+    struct TextOutcome: Equatable {
         var added = 0
+        /// Alimentos sem quantidade no texto que receberam os gramas sugeridos.
+        var suggested = 0
+        /// Trechos que não casaram com nenhum alimento.
         var notFound: [String] = []
+    }
+
+    /// Adiciona os alimentos de um texto escrito ou ditado ("200g de arroz e 150g de carne").
+    /// Quantidades ditas no texto ficam travadas. Os alimentos sem quantidade recebem os gramas que cabem
+    /// no `budget`, sem mexer nos que já estavam na refeição (sem orçamento, entram com 100 g).
+    @discardableResult
+    func addFromText(_ text: String, custom: [Food] = [], budget: Macros? = nil) -> TextOutcome {
+        var outcome = TextOutcome()
+        var unquantified: Set<ItemDraft.ID> = []
         for entry in MealTextParser.parse(text, custom: custom) {
-            if let food = entry.food {
-                add(food, grams: entry.grams ?? Self.defaultGrams)
-                added += 1
+            guard let food = entry.food else {
+                outcome.notFound.append(entry.query)
+                continue
+            }
+            add(food, grams: entry.grams ?? Self.defaultGrams)
+            outcome.added += 1
+            if entry.grams == nil {
+                unquantified.insert(items[items.count - 1].id)
             } else {
-                notFound.append(entry.query)
+                items[items.count - 1].isLocked = true
             }
         }
-        return (added, notFound)
+        if let budget, !unquantified.isEmpty {
+            let fixed = items.map { unquantified.contains($0.id) ? nil : ($0.grams ?? 0) }
+            applySuggestion(budget: budget, fixed: fixed)
+            outcome.suggested = unquantified.count
+        }
+        return outcome
     }
 
     func removeItems(at offsets: IndexSet) {
@@ -167,10 +190,34 @@ final class MealFormViewModel {
         portion = .one
     }
 
-    /// "Quanto posso comer?": troca os gramas de todos os alimentos pela sugestão que cabe no orçamento.
+    /// "Quanto posso comer?": troca os gramas dos alimentos pela sugestão que cabe no orçamento.
+    /// Os travados ficam como estão e contam no orçamento.
     func suggestPortions(budget: Macros) {
-        let grams = MealPlanner.suggestGrams(for: items.map(\.item.per100g), budget: budget)
-        for (index, value) in grams.enumerated() where items.indices.contains(index) {
+        applySuggestion(budget: budget, fixed: items.map { $0.isLocked ? ($0.grams ?? 0) : nil })
+    }
+
+    /// Ajusta um alimento (±), trava a quantidade dele e recalcula os outros para continuar cabendo.
+    func adjustAndRebalance(_ id: ItemDraft.ID, by delta: Double, budget: Macros) {
+        adjustGrams(of: id, by: delta)
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].isLocked = true
+        suggestPortions(budget: budget)
+    }
+
+    /// Trava ou destrava a quantidade de um alimento.
+    func toggleLock(_ id: ItemDraft.ID) {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].isLocked.toggle()
+    }
+
+    private func applySuggestion(budget: Macros, fixed: [Double?]) {
+        let grams = MealPlanner.suggestGrams(
+            for: items.map(\.item.per100g),
+            budget: budget,
+            fixed: fixed,
+            units: items.map(\.item.unit)
+        )
+        for (index, value) in grams.enumerated() where items.indices.contains(index) && fixed[index] == nil {
             items[index].gramsText = NumberParser.format(value)
             items[index].baseGrams = value
         }

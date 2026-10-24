@@ -83,6 +83,40 @@ final class FoodMealUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Não encontrei")).firstMatch.waitForExistence(timeout: 3))
     }
 
+    func testWhatToEatFromToday() {
+        // Na tela Hoje: escreve o que vai comer e já vê os gramas, sem montar a refeição
+        let field = app.textFields["campo-o-que-comer"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("2 ovos, pão e banana\n")
+
+        // O tipo padrão depende da hora: escolhe o jantar (o demo já tem café, almoço e lanche)
+        let types = app.segmentedControls["tipo-plano"]
+        XCTAssertTrue(types.waitForExistence(timeout: 5))
+        types.buttons["Jantar"].tap()
+        XCTAssertTrue(app.staticTexts["Para o jantar sobram ~1.015 kcal"].waitForExistence(timeout: 3))
+
+        // "2 ovos" ficam como foi dito (travados); o pão é sugerido em unidades inteiras, até 3
+        let eggs = "Ovo, de galinha, inteiro, cozido/10minutos"
+        XCTAssertEqual(app.textFields["gramas-\(eggs)"].value as? String, "100")
+        XCTAssertTrue(app.buttons["cadeado-\(eggs)"].exists)
+        XCTAssertEqual(app.staticTexts["unidades-\(eggs)"].label, "≈ 2 ovos")
+        let bread = Double(app.textFields["gramas-Pão, trigo, francês"].value as? String ?? "") ?? 0
+        XCTAssertTrue([50, 100, 150].contains(bread), "Pães inteiros, no máximo 3: \(bread) g")
+        keepScreenshot("o-que-vou-comer")
+
+        // Mais pão no + : ele trava e a banana se ajusta
+        app.buttons["Mais 10 gramas de Pão francês"].tap()
+        XCTAssertTrue(app.buttons["cadeado-Pão, trigo, francês"].waitForExistence(timeout: 3))
+
+        // Registrar salva no jantar e volta para o Hoje
+        app.buttons["registrar-plano"].tap()
+        XCTAssertFalse(types.waitForExistence(timeout: 2))
+        let dinner = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Ovo + Pão francês + Banana")).firstMatch
+        for _ in 0..<4 where !dinner.exists { app.swipeUp() }
+        XCTAssertTrue(dinner.exists, "A refeição aparece no card de refeições")
+    }
+
     func testSuggestPortionsForDinner() {
         // Demo: café, almoço e lanche já registrados → o jantar recebe tudo o que sobra (1.015 kcal)
         let dinnerRow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Jantar")).firstMatch

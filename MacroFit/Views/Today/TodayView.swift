@@ -7,6 +7,8 @@ struct TodayView: View {
     @Environment(DaySelection.self) private var selection
     @Environment(\.modelContext) private var context
     @State private var sheet: MealSheet?
+    /// Texto do "O que vai comer?" (abre a folha com os gramas sugeridos).
+    @State private var plan: PlanRequest?
     /// Última refeição adicionada pelo atalho (mostra o aviso com "Desfazer").
     @State private var quickAdded: Meal?
     @State private var toastTimer: Task<Void, Never>?
@@ -24,6 +26,14 @@ struct TodayView: View {
             .sheet(item: $sheet) { sheet in
                 MealFormView(sheet: sheet)
             }
+            .sheet(item: $plan) { plan in
+                WhatToEatView(text: plan.text, day: selection.day)
+            }
+            #if DEBUG
+            .onAppear {
+                if let text = DemoData.planText, plan == nil { plan = PlanRequest(text: text) }
+            }
+            #endif
             .overlay(alignment: .bottom) {
                 if let meal = quickAdded {
                     UndoToast(
@@ -73,6 +83,10 @@ struct TodayView: View {
 
                 addButton
 
+                WhatToEatCard { text in
+                    plan = PlanRequest(text: text)
+                }
+
                 QuickAddBar(
                     onAdd: { meal, portion in quickAdd(meal, portion: portion) },
                     onCustomize: { meal in sheet = .fromTemplate(meal, day: selection.day, portion: .one) }
@@ -120,6 +134,12 @@ struct TodayView: View {
         .buttonBorderShape(.roundedRectangle(radius: 20))
         .foregroundStyle(Color.accentForeground)
     }
+}
+
+/// Pedido do "O que vai comer?": o texto que o usuário escreveu ou ditou.
+private struct PlanRequest: Identifiable {
+    let id = UUID()
+    let text: String
 }
 
 /// Calorias por tipo de refeição. Tocar num tipo abre o formulário já com aquele tipo.

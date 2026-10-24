@@ -28,6 +28,11 @@ final class QuickAddUITests: XCTestCase {
     /// Com o encaixe por atalho (.viewAligned) ela voltava ao lugar e parecia travada.
     func testShortDragScrollsShortcuts() {
         XCTAssertTrue(yogurtChip.waitForExistence(timeout: 5))
+        // A faixa fica abaixo do card "O que vai comer?", rente à barra de abas: rola a tela antes,
+        // para o arraste cair nos atalhos e não na barra
+        let screen = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        screen.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
+        sleep(1)
         let startX = yogurtChip.frame.minX
         let fourth = app.buttons["atalho-Banana com pasta de amendoim"]
         XCTAssertFalse(fourth.isHittable, "O 4º atalho começa fora da área visível")

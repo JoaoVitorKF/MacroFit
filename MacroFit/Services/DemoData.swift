@@ -14,6 +14,7 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 1 -demo-form → abre o formulário de refeição
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-over             → como -demo, mas com a meta estourada
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2 -demo-weight → abre a evolução do peso
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-plan "2 ovos e pão" → abre o "O que vou comer?"
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -35,6 +36,13 @@ enum DemoData {
     /// `-demo-weight` abre a tela de evolução do peso ao entrar no Perfil (para prints).
     static var opensWeightHistory: Bool {
         ProcessInfo.processInfo.arguments.contains("-demo-weight")
+    }
+
+    /// `-demo-plan "arroz e frango"` abre o "O que vou comer?" com esse texto (para prints).
+    static var planText: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-demo-plan"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 
     private static var withSampleData: Bool {

@@ -108,7 +108,9 @@ struct MealFormView: View {
 
                 switch viewModel.mode {
                 case .foods:
-                    foodsSections
+                    MealBudgetReader(day: viewModel.day, type: viewModel.type, editing: viewModel.editing) { budget in
+                        foodsSections(budget: budget)
+                    }
                 case .manual:
                     manualSection
                 }
@@ -144,13 +146,15 @@ struct MealFormView: View {
     // MARK: - Por alimentos
 
     @ViewBuilder
-    private var foodsSections: some View {
+    private func foodsSections(budget: Macros?) -> some View {
         Section {
-            MealTextEntry(viewModel: viewModel)
+            MealTextEntry(viewModel: viewModel, budget: budget)
 
             ForEach($viewModel.items) { $draft in
                 MealItemRow(draft: $draft) { delta in
                     viewModel.adjustGrams(of: draft.id, by: delta)
+                } onToggleLock: {
+                    viewModel.toggleLock(draft.id)
                 }
             }
             .onDelete { viewModel.removeItems(at: $0) }
@@ -174,7 +178,7 @@ struct MealFormView: View {
             }
         }
 
-        MealBudgetSection(viewModel: viewModel)
+        MealBudgetSection(viewModel: viewModel, budget: budget)
 
         if let total = viewModel.itemsTotal {
             Section("Total da refeição") {
@@ -225,6 +229,8 @@ struct MealFormView: View {
 /// Campo para escrever (ou ditar pelo microfone do teclado) a refeição: "200g de arroz e 150g de carne".
 private struct MealTextEntry: View {
     @Bindable var viewModel: MealFormViewModel
+    /// Quanto sobra para a refeição: alimentos sem quantidade no texto recebem os gramas que cabem nele.
+    let budget: Macros?
     @Query(sort: \CustomFood.name) private var customFoods: [CustomFood]
     @State private var text = ""
     @State private var result: (message: String, isProblem: Bool)?
@@ -259,11 +265,14 @@ private struct MealTextEntry: View {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         let outcome = withAnimation {
-            viewModel.addFromText(trimmed, custom: customFoods.map(\.food))
+            viewModel.addFromText(trimmed, custom: customFoods.map(\.food), budget: budget)
         }
         var parts: [String] = []
         if outcome.added > 0 {
             parts.append(outcome.added == 1 ? "1 alimento adicionado." : "\(outcome.added) alimentos adicionados.")
+        }
+        if outcome.suggested > 0 {
+            parts.append("Os gramas sem quantidade no texto são os que cabem nesta refeição.")
         }
         if !outcome.notFound.isEmpty {
             let names = outcome.notFound.map { "\"\($0)\"" }.joined(separator: ", ")
@@ -272,68 +281,6 @@ private struct MealTextEntry: View {
         if parts.isEmpty { parts.append("Não entendi. Tente algo como \"150g de frango\".") }
         result = (parts.joined(separator: " "), !outcome.notFound.isEmpty || outcome.added == 0)
         if outcome.notFound.isEmpty && outcome.added > 0 { text = "" }
-    }
-}
-
-/// Um alimento na refeição: nome, gramas (com −10/+10) e quanto isso dá em calorias e proteína.
-private struct MealItemRow: View {
-    @Binding var draft: MealFormViewModel.ItemDraft
-    let onAdjust: (Double) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(draft.item.name)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
-
-            HStack(spacing: 8) {
-                // Estilo explícito: vários botões na mesma linha de Form
-                Button { onAdjust(-10) } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title2)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Menos 10 gramas de \(draft.item.shortName)")
-
-                TextField("100", text: $draft.gramsText)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .font(.body.monospacedDigit())
-                    .frame(width: 70)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityIdentifier("gramas-\(draft.item.name)")
-                Text("g")
-                    .foregroundStyle(.secondary)
-
-                Button { onAdjust(10) } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Mais 10 gramas de \(draft.item.shortName)")
-
-                Spacer(minLength: 4)
-
-                if let macros = draft.macros {
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text("\(macros.calories.kcalText) kcal")
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
-                            .contentTransition(.numericText())
-                        Text("P \(macros.protein.gramsText) · C \(macros.carbs.gramsText) · G \(macros.fat.gramsText)")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("valores-\(draft.item.name)")
-                } else {
-                    Text("1 a 2000 g")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-            .animation(.default, value: draft.gramsText)
-        }
-        .padding(.vertical, 4)
     }
 }
 
