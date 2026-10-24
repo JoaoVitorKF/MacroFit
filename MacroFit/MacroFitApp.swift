@@ -5,6 +5,8 @@ import SwiftUI
 struct MacroFitApp: App {
     /// Banco local do SwiftData com os dois modelos do app.
     private let container: ModelContainer
+    /// Cor de destaque escolhida no Perfil.
+    @State private var themeStore = ThemeStore.makeForApp()
 
     init() {
         #if DEBUG
@@ -23,6 +25,9 @@ struct MacroFitApp: App {
     var body: some Scene {
         WindowGroup {
             LaunchContainerView()
+                .environment(themeStore)
+                .tint(themeStore.theme.accent)
+                .environment(\.accentForeground, themeStore.theme.accentForeground)
         }
         .modelContainer(container)
     }

@@ -33,7 +33,7 @@ struct MealBudgetSection: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .foregroundStyle(Color.accentForeground)
+                    .foregroundStyle(.accentForeground)
                     .buttonBorderShape(.capsule)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())

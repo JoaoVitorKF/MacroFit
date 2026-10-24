@@ -187,7 +187,7 @@ struct WhatToEatView: View {
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
-        .foregroundStyle(Color.accentForeground)
+        .foregroundStyle(.accentForeground)
         .disabled(!viewModel.isValid)
         .padding(.horizontal)
         .padding(.vertical, 8)

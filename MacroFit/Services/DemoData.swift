@@ -38,6 +38,11 @@ enum DemoData {
         ProcessInfo.processInfo.arguments.contains("-demo-weight")
     }
 
+    /// `-demo-colors` abre a tela de cor de destaque ao entrar no Perfil (para prints).
+    static var opensAccentColors: Bool {
+        ProcessInfo.processInfo.arguments.contains("-demo-colors")
+    }
+
     /// `-demo-plan "arroz e frango"` abre o "O que vou comer?" com esse texto (para prints).
     static var planText: String? {
         let arguments = ProcessInfo.processInfo.arguments

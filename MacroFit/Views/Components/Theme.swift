@@ -60,10 +60,28 @@ enum Nutrient: CaseIterable, Identifiable {
     }
 }
 
-extension Color {
-    /// Cor do texto e dos ícones **sobre** o destaque (botões cheios): branco sobre o roxo do
-    /// modo claro, preto sobre o amarelo do modo escuro (branco sobre amarelo ficaria ilegível).
-    static let accentForeground = Color("AccentForeground")
+/// Cor do texto e dos ícones **sobre** o destaque (botões cheios): branco ou preto, o mais legível
+/// sobre a cor escolhida no Perfil (branco sobre o roxo, preto sobre o amarelo). Vem do ambiente,
+/// que a `MacroFitApp` preenche com o `ThemeStore`. Uso: `.foregroundStyle(.accentForeground)`.
+struct AccentForegroundStyle: ShapeStyle {
+    func resolve(in environment: EnvironmentValues) -> Color {
+        environment.accentForeground
+    }
+}
+
+extension ShapeStyle where Self == AccentForegroundStyle {
+    static var accentForeground: AccentForegroundStyle { AccentForegroundStyle() }
+}
+
+private struct AccentForegroundKey: EnvironmentKey {
+    static let defaultValue = AccentTheme.standard.accentForeground
+}
+
+extension EnvironmentValues {
+    var accentForeground: Color {
+        get { self[AccentForegroundKey.self] }
+        set { self[AccentForegroundKey.self] = newValue }
+    }
 }
 
 enum NutrientIcon {

@@ -46,6 +46,7 @@ xcrun simctl launch booted com.joaovitor.macrofit -demo-over         # meta esto
 #         -demo-weight (abre a evolução do peso) · -demo-select (gráfico com um dia já selecionado)
 #         -skip-splash (pula a tela de carregamento; os testes de interface sempre usam)
 #         -demo-plan "2 ovos e pão" (abre o "O que vou comer?" com esse texto)
+#         -demo-colors (com -demo-tab 2: abre a tela de cor de destaque)
 xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /caminho/print.png
 ```
 Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015, com 115 de 160 g de proteína. Há
@@ -96,7 +97,7 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
     e chama o `CelebrationCenter`, então funciona para qualquer forma de registrar. Ele ignora os primeiros 0,8 s
     (carregamento) e só comemora quando a meta é **cruzada**. O confete é desenhado com `Canvas` e some com Reduzir Movimento
   - `Weight/`: `WeightCard` (Perfil), `WeightHistoryView`, `WeightChart` (Swift Charts com `chartXSelection`), `WeightEntrySheet`
-  - `Theme.swift`: cores e ícones de cada nutriente (`Nutrient`) e o modificador `.card()`
+  - `Theme.swift`: cores e ícones de cada nutriente (`Nutrient`), o modificador `.card()` e o estilo `.accentForeground`
 
 ## Alimentos e refeição por gramas
 - **Tabela:** `Resources/taco.json` (591 alimentos da TACO 4ª ed., por 100 g), gerado por `Tools/taco/generate_taco.py`
@@ -139,9 +140,18 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
   A comemoração e a dica de proteína usam `trophy.fill`, porque o coração agora é da gordura
 - Faixa de atalhos com **rolagem livre**. O encaixe por atalho (`.viewAligned`) fazia arrastes curtos voltarem ao lugar,
   e o usuário achou que não rolava. `testShortDragScrollsShortcuts` cobre isso
-- **Destaque (AccentColor): roxo `rgb(112,64,196)` no modo claro e amarelo `rgb(255,204,0)` no escuro**, pedido do usuário.
-  Texto ou ícone *sobre* o destaque (botões `.borderedProminent`) usa `Color.accentForeground`: branco no claro e
-  **preto no escuro**, porque branco sobre amarelo fica ilegível. Contraste de 6,5:1 e 13,9:1. Botão desabilitado volta ao `.secondary`
+- **Destaque: o usuário escolhe no Perfil → Aparência → Cor de destaque** (`AccentColorView`: cores prontas, tabela RGB
+  com barra e número para R/G/B, campo hex, prévia, aviso de pouco contraste e "Voltar ao roxo e amarelo").
+  Padrão (`AccentTheme.standard`): **roxo `rgb(112,64,196)` no modo claro e amarelo `rgb(255,204,0)` no escuro**
+  - `ThemeStore` (`Services/ThemeStore.swift`) guarda em `UserDefaults` ("theme.accentLight"/"theme.accentDark" em hex).
+    No modo demo usa um `UserDefaults` à parte, zerado a cada abertura (testes não mexem na cor real)
+  - A `MacroFitApp` aplica `.tint(theme.accent)` na raiz. **`Color.accentColor` segue o `.tint`** (conferido no
+    simulador), então as telas continuam usando `Color.accentColor`/`.tint` normalmente. O `AccentColor` do catálogo
+    só vale antes da raiz (tela de abertura do sistema)
+  - Texto ou ícone *sobre* o destaque (botões `.borderedProminent`) usa `.foregroundStyle(.accentForeground)`
+    (`AccentForegroundStyle`, lido do ambiente): branco ou preto, o de maior contraste WCAG sobre a cor
+    (`RGBColor.readableForeground`). Branco sobre o roxo 6,5:1, preto sobre o amarelo 13,9:1. Botão desabilitado volta ao `.secondary`
+  - Aviso de contraste: destaque × fundo dos cards abaixo de 3:1 (ex.: amarelo no modo claro)
 - Passar da meta de calorias deixa o anel **vermelho**. Laranja se confundia com o amarelo do modo escuro
 - O botão "+ Adicionar refeição" da tela Hoje fica **no fluxo**, logo abaixo do anel. Flutuante, ele cobria as barras de macros.
   Logo abaixo dele vem o card "O que vai comer?", e a faixa de atalhos fica rente à barra de abas: testes que arrastam

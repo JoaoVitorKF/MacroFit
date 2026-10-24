@@ -62,7 +62,7 @@ struct TipCard: View {
                             .lineLimit(1)
                     }
                     .buttonStyle(.borderedProminent)
-                    .foregroundStyle(Color.accentForeground)
+                    .foregroundStyle(.accentForeground)
                     .buttonBorderShape(.capsule)
                     .controlSize(.small)
                     .padding(.top, 2)

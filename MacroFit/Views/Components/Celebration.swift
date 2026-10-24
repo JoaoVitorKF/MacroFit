@@ -103,7 +103,7 @@ private struct CelebrationBanner: View {
             HStack(spacing: 14) {
                 Image(systemName: event.achievements.first?.symbol ?? "star.fill")
                     .font(.title)
-                    .foregroundStyle(Color.accentForeground)
+                    .foregroundStyle(.accentForeground)
                     .frame(width: 52, height: 52)
                     .background(Color.accentColor, in: Circle())
                     .symbolEffect(.bounce, value: event.id)

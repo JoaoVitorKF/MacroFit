@@ -8,6 +8,7 @@ struct ProfileView: View {
     /// Mudança nas metas causada pelo último peso registrado (mostra o aviso no topo).
     @State private var goalChange: GoalChange?
     @State private var showsWeightHistory = false
+    @State private var showsAccentColors = false
 
     var body: some View {
         NavigationStack {
@@ -42,6 +43,15 @@ struct ProfileView: View {
                     LabeledContent("Objetivo", value: profile.goal.displayName)
                 }
 
+                Section("Aparência") {
+                    NavigationLink {
+                        AccentColorView()
+                    } label: {
+                        AccentColorRow()
+                    }
+                    .accessibilityIdentifier("cor-destaque")
+                }
+
                 Section {
                     Button {
                         isEditing = true
@@ -62,12 +72,40 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $showsWeightHistory) {
                 WeightHistoryView(profile: profile)
             }
+            .navigationDestination(isPresented: $showsAccentColors) {
+                AccentColorView()
+            }
             #if DEBUG
             .onAppear {
                 if DemoData.opensWeightHistory { showsWeightHistory = true }
+                if DemoData.opensAccentColors { showsAccentColors = true }
             }
             #endif
         }
+    }
+}
+
+/// Linha "Cor de destaque" do Perfil, com as amostras do modo claro e do escuro.
+private struct AccentColorRow: View {
+    @Environment(ThemeStore.self) private var store
+
+    var body: some View {
+        HStack {
+            Label("Cor de destaque", systemImage: "paintpalette.fill")
+            Spacer()
+            HStack(spacing: -6) {
+                swatch(store.theme.light)
+                swatch(store.theme.dark)
+            }
+            .accessibilityHidden(true)
+        }
+    }
+
+    private func swatch(_ color: RGBColor) -> some View {
+        Circle()
+            .fill(color.color)
+            .frame(width: 22, height: 22)
+            .overlay(Circle().strokeBorder(Color(.systemBackground), lineWidth: 2))
     }
 }
 
@@ -109,4 +147,5 @@ private struct ProfileEditSheet: View {
 #Preview {
     ProfileView(profile: UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate))
         .modelContainer(for: MacroFitSchema.models, inMemory: true)
+        .environment(ThemeStore(defaults: UserDefaults(suiteName: "preview") ?? .standard))
 }
