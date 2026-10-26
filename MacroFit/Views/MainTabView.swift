@@ -9,6 +9,7 @@ struct MainTabView: View {
     /// Comemorações ao bater metas (aviso + confete por cima de qualquer aba).
     @State private var celebrations = CelebrationCenter()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var context
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -34,6 +35,7 @@ struct MainTabView: View {
             // Ao voltar para o app depois da meia-noite, "hoje" passa a ser o novo dia
             if phase == .active {
                 daySelection.refreshIfDayChanged()
+                EnergyStore.refresh(profile, in: context)
             }
         }
     }

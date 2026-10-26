@@ -13,6 +13,9 @@ final class ProfileViewModel {
     var heightText: String
     var activity: ActivityLevel
     var goal: Goal
+    var pace: WeightLossPace
+    /// Gasto pelos registros do perfil sendo editado (as metas ao vivo usam o mesmo gasto que o Perfil).
+    private let measuredTdee: Double?
 
     /// Cria o formulário vazio (onboarding) ou preenchido com um perfil existente (edição).
     init(profile: UserProfile? = nil) {
@@ -23,6 +26,8 @@ final class ProfileViewModel {
             heightText = NumberParser.format(profile.heightCm)
             activity = profile.activity
             goal = profile.goal
+            pace = profile.pace
+            measuredTdee = profile.usesMeasuredTdee ? profile.measuredTdee : nil
         } else {
             sex = .male
             ageText = ""
@@ -30,6 +35,8 @@ final class ProfileViewModel {
             heightText = ""
             activity = .moderate
             goal = .recomposition
+            pace = .moderate
+            measuredTdee = nil
         }
     }
 
@@ -47,7 +54,9 @@ final class ProfileViewModel {
             weightKg: weight,
             heightCm: height,
             activity: activity,
-            goal: goal
+            goal: goal,
+            pace: pace,
+            measuredTdee: measuredTdee
         )
     }
 
@@ -73,6 +82,7 @@ final class ProfileViewModel {
             profile.heightCm = input.heightCm
             profile.activity = input.activity
             profile.goal = input.goal
+            profile.pace = input.pace
             profile.updatedAt = .now
             // Peso alterado no formulário vira um registro de hoje no histórico
             if weightChanged {
@@ -85,7 +95,8 @@ final class ProfileViewModel {
                 weightKg: input.weightKg,
                 heightCm: input.heightCm,
                 activity: input.activity,
-                goal: input.goal
+                goal: input.goal,
+                pace: input.pace
             ))
             // Primeiro ponto do histórico de peso
             context.insert(WeightEntry(weightKg: input.weightKg, day: .now))

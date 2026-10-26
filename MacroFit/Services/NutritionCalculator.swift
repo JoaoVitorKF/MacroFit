@@ -8,18 +8,35 @@ struct NutritionInput: Equatable {
     var heightCm: Double
     var activity: ActivityLevel
     var goal: Goal
+    /// Ritmo de perda (só vale para `goal == .loseFat`).
+    var pace: WeightLossPace = .moderate
+    /// Gasto estimado pelos registros (`EnergyBalance`). Quando existe, substitui TMB × atividade.
+    var measuredTdee: Double? = nil
+}
+
+/// Por que a meta de calorias não é a que o objetivo pediria.
+enum CalorieLimit: Equatable {
+    /// Ficou abaixo do mínimo por sexo (1500/1200) e subiu até ele.
+    case sexMinimum
+    /// Ficou abaixo da TMB e subiu até ela (não comer menos que o gasto em repouso).
+    case bmr
+    /// O ritmo pedia um déficit maior que o máximo diário; usamos o máximo.
+    case maxDeficit
 }
 
 /// Resultado completo do cálculo, pronto para exibir na tela.
 struct NutritionTargets: Equatable {
     /// Taxa metabólica basal (kcal/dia).
     let bmr: Double
-    /// Gasto energético total (kcal/dia) = TMB × fator de atividade.
+    /// Gasto energético total (kcal/dia) usado nas metas: o medido pelos registros, se houver,
+    /// ou TMB × fator de atividade.
     let tdee: Double
-    /// Meta de calorias após aplicar o objetivo e o piso mínimo.
+    /// `true` quando o `tdee` veio dos registros (`EnergyBalance`), não da fórmula.
+    let tdeeIsMeasured: Bool
+    /// Meta de calorias após aplicar o objetivo e os limites.
     let calories: Double
-    /// `true` quando a meta calculada ficou abaixo do mínimo e foi elevada até ele.
-    let minimumApplied: Bool
+    /// Limite que mudou a meta, se houve (piso por sexo, TMB ou déficit máximo).
+    let limit: CalorieLimit?
     let protein: Double
     let carbs: Double
     let fat: Double
@@ -28,6 +45,16 @@ struct NutritionTargets: Equatable {
 
     /// Diferença entre a meta e o TDEE: negativo = déficit, positivo = superávit.
     var calorieDelta: Double { calories - tdee }
+
+    /// `true` quando a meta calculada ficou abaixo do mínimo por sexo e foi elevada até ele.
+    var minimumApplied: Bool { limit == .sexMinimum }
+
+    /// Variação de peso esperada por semana (kg), pela regra de ~7.700 kcal por kg.
+    /// Negativo = perda. É uma estimativa: no começo a balança mexe mais (água e glicogênio)
+    /// e, com o tempo, o gasto cai um pouco junto com o peso.
+    var weeklyWeightChangeKg: Double {
+        calorieDelta * 7 / NutritionCalculator.kcalPerKgBodyWeight
+    }
 
     var macros: Macros {
         Macros(calories: calories, protein: protein, carbs: carbs, fat: fat)
@@ -49,6 +76,11 @@ enum NutritionCalculator {
     static let fatGramsPerKg = 0.9
     /// ...mas nunca menos que 20% das calorias.
     static let minimumFatShare = 0.20
+
+    /// Energia de 1 kg de peso perdido ou ganho (principalmente gordura): ~7.700 kcal.
+    static let kcalPerKgBodyWeight = 7700.0
+    /// Maior déficit diário que o app aceita: acima disso a perda de músculo e a fome pesam demais.
+    static let maxDailyDeficit = 1000.0
 
     /// Piso de calorias diárias por sexo.
     static func minimumCalories(for sex: BiologicalSex) -> Double {
@@ -76,18 +108,41 @@ enum NutritionCalculator {
         bmr * activity.factor
     }
 
-    /// Meta de calorias: TDEE ajustado pelo objetivo, respeitando o piso por sexo.
+    /// Déficit diário para perder `pace` do peso por semana: peso × % × 7.700 ÷ 7.
+    /// Ex.: 97 kg a 0,75%/semana = 0,7275 kg × 7.700 ÷ 7 = 800,25 kcal/dia.
+    static func paceDeficit(weightKg: Double, pace: WeightLossPace) -> Double {
+        weightKg * pace.weeklyFraction * kcalPerKgBodyWeight / 7
+    }
+
+    /// Meta de calorias:
+    /// - Recomposição e ganho de massa: TDEE × multiplicador do objetivo
+    /// - Emagrecer: TDEE − déficit do ritmo, com no máximo `maxDailyDeficit` (1.000 kcal)
+    /// - Piso: nunca abaixo do mínimo por sexo nem, para perder peso, abaixo da TMB
     static func targetCalories(
         tdee: Double,
+        bmr: Double,
         goal: Goal,
-        sex: BiologicalSex
-    ) -> (calories: Double, minimumApplied: Bool) {
-        let adjusted = tdee * goal.calorieMultiplier
-        let minimum = minimumCalories(for: sex)
-        if adjusted < minimum {
-            return (minimum, true)
+        sex: BiologicalSex,
+        weightKg: Double,
+        pace: WeightLossPace
+    ) -> (calories: Double, limit: CalorieLimit?) {
+        var calories: Double
+        var limit: CalorieLimit?
+        if let multiplier = goal.tdeeMultiplier {
+            calories = tdee * multiplier
+        } else {
+            let wanted = paceDeficit(weightKg: weightKg, pace: pace)
+            if wanted > maxDailyDeficit { limit = .maxDeficit }
+            calories = tdee - min(wanted, maxDailyDeficit)
         }
-        return (adjusted, false)
+
+        // A TMB só é piso quando a meta é de déficit (no ganho de massa a meta já fica acima dela)
+        let minimum = minimumCalories(for: sex)
+        let floor = goal == .gainMuscle ? minimum : max(minimum, bmr)
+        if calories < floor {
+            return (floor, floor == minimum ? .sexMinimum : .bmr)
+        }
+        return (calories, limit)
     }
 
     /// Divide as calorias em macros:
@@ -113,15 +168,18 @@ enum NutritionCalculator {
     /// Faz o cálculo completo a partir dos dados do perfil.
     static func targets(for input: NutritionInput) -> NutritionTargets {
         let bmr = bmr(sex: input.sex, weightKg: input.weightKg, heightCm: input.heightCm, age: input.age)
-        let tdee = tdee(bmr: bmr, activity: input.activity)
-        let target = targetCalories(tdee: tdee, goal: input.goal, sex: input.sex)
+        let tdee = input.measuredTdee ?? tdee(bmr: bmr, activity: input.activity)
+        let target = targetCalories(
+            tdee: tdee, bmr: bmr, goal: input.goal, sex: input.sex, weightKg: input.weightKg, pace: input.pace
+        )
         let split = macros(calories: target.calories, weightKg: input.weightKg)
 
         return NutritionTargets(
             bmr: bmr,
             tdee: tdee,
+            tdeeIsMeasured: input.measuredTdee != nil,
             calories: target.calories,
-            minimumApplied: target.minimumApplied,
+            limit: target.limit,
             protein: split.protein,
             carbs: split.carbs,
             fat: split.fat,

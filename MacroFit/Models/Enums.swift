@@ -61,7 +61,8 @@ enum ActivityLevel: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-/// Objetivo do usuário e o ajuste percentual sobre o TDEE.
+/// Objetivo do usuário. Recomposição e ganho de massa ajustam o TDEE por porcentagem;
+/// emagrecer usa o ritmo de perda escolhido (`WeightLossPace`).
 enum Goal: String, CaseIterable, Identifiable, Codable {
     case recomposition
     case loseFat
@@ -69,11 +70,11 @@ enum Goal: String, CaseIterable, Identifiable, Codable {
 
     var id: String { rawValue }
 
-    /// Multiplicador aplicado sobre o TDEE (ex.: 0.85 = −15%).
-    var calorieMultiplier: Double {
+    /// Multiplicador aplicado sobre o TDEE (ex.: 0.85 = −15%). `nil` para emagrecer, que usa o ritmo.
+    var tdeeMultiplier: Double? {
         switch self {
         case .recomposition: 0.85
-        case .loseFat: 0.80
+        case .loseFat: nil
         case .gainMuscle: 1.10
         }
     }
@@ -89,7 +90,7 @@ enum Goal: String, CaseIterable, Identifiable, Codable {
     var detail: String {
         switch self {
         case .recomposition: "Ganhar músculo e perder gordura (−15%)"
-        case .loseFat: "Foco em perder gordura (−20%)"
+        case .loseFat: "Foco em perder gordura, no ritmo que você escolher"
         case .gainMuscle: "Foco em ganhar massa (+10%)"
         }
     }
@@ -153,5 +154,38 @@ enum MealType: String, CaseIterable, Identifiable, Codable {
         case 15..<18: .snack
         default: .dinner
         }
+    }
+}
+
+/// Ritmo de perda de peso no objetivo "Emagrecer", em % do peso corporal por semana.
+/// 0,5–1% por semana é a faixa usual de recomendação: mais rápido que isso aumenta a perda de músculo.
+enum WeightLossPace: String, CaseIterable, Identifiable, Codable {
+    case gentle
+    case moderate
+    case fast
+
+    var id: String { rawValue }
+
+    /// Fração do peso perdida por semana (0,0075 = 0,75%).
+    var weeklyFraction: Double {
+        switch self {
+        case .gentle: 0.005
+        case .moderate: 0.0075
+        case .fast: 0.01
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .gentle: "Leve"
+        case .moderate: "Moderado"
+        case .fast: "Rápido"
+        }
+    }
+
+    /// "0,5% do peso por semana".
+    var detail: String {
+        let percent = (weeklyFraction * 100).formatted(.number.precision(.fractionLength(0...2)).locale(Locale(identifier: "pt_BR")))
+        return "\(percent)% do peso por semana"
     }
 }

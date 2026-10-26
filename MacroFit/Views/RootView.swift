@@ -14,6 +14,8 @@ struct RootView: View {
                     .task {
                         // Perfis criados antes do histórico de peso ganham o primeiro registro
                         WeightStore.ensureInitialEntry(for: profile, in: context)
+                        // Gasto real pelos registros dos últimos 28 dias
+                        EnergyStore.refresh(profile, in: context)
                     }
             } else {
                 OnboardingView()

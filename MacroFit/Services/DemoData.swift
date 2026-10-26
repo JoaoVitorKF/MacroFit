@@ -15,6 +15,7 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo-over             → como -demo, mas com a meta estourada
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2 -demo-weight → abre a evolução do peso
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-plan "2 ovos e pão" → abre o "O que vou comer?"
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-energy -demo-tab 2 → "Gasto real" com um mês de dados
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -112,6 +113,15 @@ enum DemoData {
             let wobble = step == 20 ? 0 : 0.3 * sin(Double(step) * 1.7)
             let weight = ((trend + wobble) * 10).rounded() / 10
             context.insert(WeightEntry(weightKg: weight, day: day))
+        }
+        // -demo-energy: um mês de registros (7 a 28 dias atrás, ~2.200 kcal/dia) para o "Gasto real" ter dados.
+        // Não toca em hoje nem em ontem
+        if ProcessInfo.processInfo.arguments.contains("-demo-energy") {
+            for offset in 7...28 {
+                let day = Calendar.current.date(byAdding: .day, value: -offset, to: today) ?? today
+                let kcal = 2200 + Double((offset * 37) % 160) - 80
+                context.insert(Meal(name: "Dia registrado", type: .lunch, day: day, calories: kcal, protein: 140, carbs: 240, fat: 65))
+            }
         }
         // -demo-over: um jantar exagerado para estourar a meta de calorias e de gordura
         if ProcessInfo.processInfo.arguments.contains("-demo-over") {

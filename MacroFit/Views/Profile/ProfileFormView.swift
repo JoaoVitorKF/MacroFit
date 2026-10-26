@@ -37,17 +37,32 @@ struct ProfileFormView: View {
                 Text("\(viewModel.activity.detail) · fator \(viewModel.activity.factor.formatted())")
             }
 
-            Section("Objetivo") {
+            Section {
                 ForEach(Goal.allCases) { goal in
                     GoalRow(goal: goal, isSelected: viewModel.goal == goal) {
-                        viewModel.goal = goal
+                        withAnimation { viewModel.goal = goal }
                     }
+                }
+                if viewModel.goal == .loseFat {
+                    Picker("Ritmo", selection: $viewModel.pace) {
+                        ForEach(WeightLossPace.allCases) { pace in
+                            Text(pace.displayName).tag(pace)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("ritmo")
+                }
+            } header: {
+                Text("Objetivo")
+            } footer: {
+                if viewModel.goal == .loseFat {
+                    Text(paceFooter)
                 }
             }
 
             Section("Suas metas diárias") {
                 if let targets = viewModel.targets {
-                    GoalsSummaryView(targets: targets, sex: viewModel.sex, goal: viewModel.goal)
+                    GoalsSummaryView(targets: targets, sex: viewModel.sex, goal: viewModel.goal, weightKg: viewModel.input?.weightKg ?? 0)
                 } else {
                     Label("Preencha idade, peso e altura para ver suas metas.", systemImage: "info.circle")
                         .foregroundStyle(.secondary)
@@ -56,6 +71,17 @@ struct ProfileFormView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .keyboardDoneButton()
+    }
+}
+
+extension ProfileFormView {
+    /// "Moderado: 0,75% do peso por semana (≈ 0,73 kg)". Recomendação usual: 0,5–1% por semana.
+    var paceFooter: String {
+        var text = "\(viewModel.pace.displayName): \(viewModel.pace.detail)"
+        if let weight = viewModel.input?.weightKg {
+            text += " (≈ \((weight * viewModel.pace.weeklyFraction).preciseKgText))"
+        }
+        return text + ". De 0,5% a 1% por semana é a faixa recomendada; mais rápido que isso aumenta a perda de músculo."
     }
 }
 

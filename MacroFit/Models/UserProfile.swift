@@ -10,6 +10,12 @@ final class UserProfile {
     var heightCm: Double
     var activityRaw: String
     var goalRaw: String
+    /// Ritmo de perda (`WeightLossPace`). Opcional: perfis antigos não têm e usam o moderado.
+    var paceRaw: String?
+    /// Gasto pelos registros (`EnergyBalance`), atualizado pelo `EnergyStore`. `nil` = ainda sem dados.
+    var measuredTdee: Double?
+    /// `true` se o usuário desligou o gasto pelos registros (metas só pela fórmula). `nil` = ligado.
+    var ignoresMeasuredTdee: Bool?
     var updatedAt: Date
 
     init(
@@ -18,7 +24,8 @@ final class UserProfile {
         weightKg: Double,
         heightCm: Double,
         activity: ActivityLevel,
-        goal: Goal = .recomposition
+        goal: Goal = .recomposition,
+        pace: WeightLossPace = .moderate
     ) {
         self.sexRaw = sex.rawValue
         self.age = age
@@ -26,6 +33,7 @@ final class UserProfile {
         self.heightCm = heightCm
         self.activityRaw = activity.rawValue
         self.goalRaw = goal.rawValue
+        self.paceRaw = pace.rawValue
         self.updatedAt = .now
     }
 
@@ -46,18 +54,36 @@ final class UserProfile {
         set { goalRaw = newValue.rawValue }
     }
 
+    var pace: WeightLossPace {
+        get { paceRaw.flatMap(WeightLossPace.init(rawValue:)) ?? .moderate }
+        set { paceRaw = newValue.rawValue }
+    }
+
     // MARK: - Cálculo
 
-    /// Dados de entrada para o `NutritionCalculator`.
+    /// Dados de entrada para o `NutritionCalculator` (com o gasto pelos registros, se estiver ligado).
     var nutritionInput: NutritionInput {
+        var input = formulaInput
+        input.measuredTdee = usesMeasuredTdee ? measuredTdee : nil
+        return input
+    }
+
+    /// Só a fórmula (TMB × atividade), sem o gasto pelos registros.
+    var formulaInput: NutritionInput {
         NutritionInput(
             sex: sex,
             age: age,
             weightKg: weightKg,
             heightCm: heightCm,
             activity: activity,
-            goal: goal
+            goal: goal,
+            pace: pace
         )
+    }
+
+    var usesMeasuredTdee: Bool {
+        get { ignoresMeasuredTdee != true }
+        set { ignoresMeasuredTdee = !newValue }
     }
 
     /// Metas calculadas a partir dos dados atuais do perfil.

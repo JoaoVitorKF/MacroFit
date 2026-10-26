@@ -72,12 +72,13 @@ final class NutritionCalculatorTests: XCTestCase {
 
     func testMaleLoseFat() {
         let t = NutritionCalculator.targets(for: with(man, goal: .loseFat))
-        // 2759 × 0,80 = 2207,2
-        XCTAssertEqual(t.calories, 2207.2, accuracy: accuracy)
-        XCTAssertEqual(t.calorieDelta, -551.8, accuracy: accuracy)
-        // Carbo (2207,2 − 640 − 648) / 4 = 229,8
-        XCTAssertEqual(t.carbs, 229.8, accuracy: accuracy)
-        XCTAssertFalse(t.minimumApplied)
+        // Ritmo moderado: 80 × 0,75% = 0,6 kg/semana → 0,6 × 7700 / 7 = 660 kcal/dia → 2759 − 660 = 2099
+        XCTAssertEqual(t.calories, 2099, accuracy: accuracy)
+        XCTAssertEqual(t.calorieDelta, -660, accuracy: accuracy)
+        XCTAssertEqual(t.weeklyWeightChangeKg, -0.6, accuracy: accuracy)
+        // Carbo (2099 − 640 − 648) / 4 = 202,75
+        XCTAssertEqual(t.carbs, 202.75, accuracy: accuracy)
+        XCTAssertNil(t.limit)
     }
 
     func testMaleGainMuscle() {
@@ -108,11 +109,12 @@ final class NutritionCalculatorTests: XCTestCase {
 
     func testFemaleLoseFat() {
         let t = NutritionCalculator.targets(for: with(woman, goal: .loseFat))
-        // 1849,71875 × 0,80 = 1479,775 (acima do piso de 1200)
-        XCTAssertEqual(t.calories, 1479.775, accuracy: accuracy)
-        XCTAssertEqual(t.calorieDelta, -369.94375, accuracy: accuracy)
-        XCTAssertEqual(t.carbs, 128.44375, accuracy: accuracy)
-        XCTAssertFalse(t.minimumApplied)
+        // 60 × 0,75% = 0,45 kg/semana → 495 kcal/dia → 1849,71875 − 495 = 1354,71875 (acima da TMB 1345,25)
+        XCTAssertEqual(t.calories, 1354.71875, accuracy: accuracy)
+        XCTAssertEqual(t.calorieDelta, -495, accuracy: accuracy)
+        // Carbo (1354,71875 − 480 − 486) / 4 = 97,1796875
+        XCTAssertEqual(t.carbs, 97.1796875, accuracy: accuracy)
+        XCTAssertNil(t.limit)
     }
 
     func testFemaleGainMuscle() {
@@ -131,7 +133,7 @@ final class NutritionCalculatorTests: XCTestCase {
     }
 
     func testMaleMinimumApplied() {
-        // TMB = 450 + 937,5 − 400 + 5 = 992,5 → TDEE 1191 → −20% = 952,8 < 1500
+        // TMB = 450 + 937,5 − 400 + 5 = 992,5 → TDEE 1191 → − 371,25 (45 kg × 0,75%) = 819,75 < 1500
         let input = NutritionInput(sex: .male, age: 80, weightKg: 45, heightCm: 150, activity: .sedentary, goal: .loseFat)
         let t = NutritionCalculator.targets(for: input)
         XCTAssertEqual(t.tdee, 1191, accuracy: accuracy)
@@ -142,7 +144,7 @@ final class NutritionCalculatorTests: XCTestCase {
     }
 
     func testFemaleMinimumApplied() {
-        // TMB = 400 + 875 − 350 − 161 = 764 → TDEE 916,8 → −20% = 733,44 < 1200
+        // TMB = 400 + 875 − 350 − 161 = 764 → TDEE 916,8 → − 330 (40 kg × 0,75%) = 586,8 < 1200
         let input = NutritionInput(sex: .female, age: 70, weightKg: 40, heightCm: 140, activity: .sedentary, goal: .loseFat)
         let t = NutritionCalculator.targets(for: input)
         XCTAssertEqual(t.calories, 1200, accuracy: accuracy)
@@ -153,24 +155,91 @@ final class NutritionCalculatorTests: XCTestCase {
         XCTAssertEqual(t.carbs, 139, accuracy: accuracy)
     }
 
+    private func target(tdee: Double, bmr: Double = 1100, goal: Goal, sex: BiologicalSex = .male,
+                        weightKg: Double = 70, pace: WeightLossPace = .moderate) -> (calories: Double, limit: CalorieLimit?) {
+        NutritionCalculator.targetCalories(tdee: tdee, bmr: bmr, goal: goal, sex: sex, weightKg: weightKg, pace: pace)
+    }
+
     func testMinimumNotAppliedJustAbove() {
         // 1900 × 0,85 = 1615 ≥ 1500 → mantém
-        let result = NutritionCalculator.targetCalories(tdee: 1900, goal: .recomposition, sex: .male)
+        let result = target(tdee: 1900, goal: .recomposition)
         XCTAssertEqual(result.calories, 1615, accuracy: accuracy)
-        XCTAssertFalse(result.minimumApplied)
+        XCTAssertNil(result.limit)
     }
 
     func testMinimumAppliedJustBelow() {
-        // 1800 × 0,80 = 1440 < 1500 → sobe para 1500
-        let result = NutritionCalculator.targetCalories(tdee: 1800, goal: .loseFat, sex: .male)
+        // 1750 × 0,85 = 1487,5 < 1500 → sobe para 1500
+        let result = target(tdee: 1750, goal: .recomposition)
         XCTAssertEqual(result.calories, 1500, accuracy: accuracy)
-        XCTAssertTrue(result.minimumApplied)
+        XCTAssertEqual(result.limit, .sexMinimum)
     }
 
     func testFemaleFloorDoesNotApplyToMaleValue() {
-        // 1500 × 0,85 = 1275: abaixo do piso masculino, mas acima do feminino
-        XCTAssertTrue(NutritionCalculator.targetCalories(tdee: 1500, goal: .recomposition, sex: .male).minimumApplied)
-        XCTAssertFalse(NutritionCalculator.targetCalories(tdee: 1500, goal: .recomposition, sex: .female).minimumApplied)
+        // 1500 × 0,85 = 1275: abaixo do piso masculino, mas acima do feminino (e da TMB de 1100)
+        XCTAssertEqual(target(tdee: 1500, goal: .recomposition, sex: .male).limit, .sexMinimum)
+        XCTAssertNil(target(tdee: 1500, goal: .recomposition, sex: .female).limit)
+    }
+
+    // MARK: - Ritmo de perda, déficit máximo e TMB como piso
+
+    func testPaceDeficit() {
+        // 97 kg: 0,5% = 0,485 kg/sem → 533,5 kcal/dia · 0,75% → 800,25 · 1% → 1067
+        XCTAssertEqual(NutritionCalculator.paceDeficit(weightKg: 97, pace: .gentle), 533.5, accuracy: accuracy)
+        XCTAssertEqual(NutritionCalculator.paceDeficit(weightKg: 97, pace: .moderate), 800.25, accuracy: accuracy)
+        XCTAssertEqual(NutritionCalculator.paceDeficit(weightKg: 97, pace: .fast), 1067, accuracy: accuracy)
+    }
+
+    func testRealProfileModeratePace() {
+        // Homem 18a, 97 kg, 175 cm, moderado: TMB = 970 + 1093,75 − 90 + 5 = 1978,75 → TDEE × 1,55 = 3067,0625
+        // Antes (−20%): 2453,65 kcal. Agora, 0,75%/semana: 3067,0625 − 800,25 = 2266,8125
+        let input = NutritionInput(sex: .male, age: 18, weightKg: 97, heightCm: 175, activity: .moderate, goal: .loseFat, pace: .moderate)
+        let t = NutritionCalculator.targets(for: input)
+        XCTAssertEqual(t.bmr, 1978.75, accuracy: accuracy)
+        XCTAssertEqual(t.calories, 2266.8125, accuracy: accuracy)
+        XCTAssertEqual(t.weeklyWeightChangeKg, -0.7275, accuracy: accuracy)
+        XCTAssertNil(t.limit)
+    }
+
+    func testFastPaceIsCappedAtMaxDeficit() {
+        // 97 kg a 1%: pediria 1067 kcal/dia → limitado a 1000 → 3067,0625 − 1000 = 2067,0625 (acima da TMB)
+        let input = NutritionInput(sex: .male, age: 18, weightKg: 97, heightCm: 175, activity: .moderate, goal: .loseFat, pace: .fast)
+        let t = NutritionCalculator.targets(for: input)
+        XCTAssertEqual(t.calories, 2067.0625, accuracy: accuracy)
+        XCTAssertEqual(t.limit, .maxDeficit)
+        XCTAssertEqual(t.weeklyWeightChangeKg, -1000 * 7 / 7700, accuracy: accuracy)
+    }
+
+    func testBMRIsTheFloorWhenLosingWeight() {
+        // Sedentário: TDEE 1978,75 × 1,2 = 2374,5 → − 1000 = 1374,5 < TMB 1978,75 → meta = TMB
+        // O ritmo real cai para (2374,5 − 1978,75) × 7 / 7700 ≈ 0,36 kg/semana
+        let input = NutritionInput(sex: .male, age: 18, weightKg: 97, heightCm: 175, activity: .sedentary, goal: .loseFat, pace: .fast)
+        let t = NutritionCalculator.targets(for: input)
+        XCTAssertEqual(t.calories, 1978.75, accuracy: accuracy)
+        XCTAssertEqual(t.limit, .bmr)
+        XCTAssertEqual(t.weeklyWeightChangeKg, -395.75 * 7 / 7700, accuracy: accuracy)
+        XCTAssertFalse(t.minimumApplied, "O aviso do piso por sexo é outro")
+    }
+
+    func testGainMuscleIgnoresPaceAndBMRFloor() {
+        let input = NutritionInput(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate, goal: .gainMuscle, pace: .fast)
+        XCTAssertEqual(NutritionCalculator.targets(for: input).calories, 3034.9, accuracy: accuracy)
+    }
+
+    func testRecompositionWeeklyChange() {
+        // −413,85 kcal/dia × 7 / 7700 = −0,37623 kg/semana
+        XCTAssertEqual(NutritionCalculator.targets(for: man).weeklyWeightChangeKg, -0.37623, accuracy: 0.0001)
+    }
+
+    func testOldProfileWithoutPaceUsesModerate() {
+        let profile = UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate, goal: .loseFat)
+        profile.paceRaw = nil
+        XCTAssertEqual(profile.pace, .moderate)
+        XCTAssertEqual(profile.targets.calories, 2099, accuracy: accuracy)
+    }
+
+    func testPaceDetail() {
+        XCTAssertEqual(WeightLossPace.moderate.detail, "0,75% do peso por semana")
+        XCTAssertEqual(WeightLossPace.fast.detail, "1% do peso por semana")
     }
 
     // MARK: - Regras dos macros
@@ -188,11 +257,12 @@ final class NutritionCalculatorTests: XCTestCase {
     }
 
     func testCarbsNeverNegative() {
-        // TMB = 900 + 937,5 − 350 − 161 = 1326,5 → TDEE 1591,8 → −20% = 1273,44
-        // Proteína 180 g (720 kcal) + gordura 81 g (729 kcal) = 1449 kcal > 1273,44
+        // TMB = 900 + 937,5 − 350 − 161 = 1326,5 → TDEE 1591,8 → − 742,5 = 849,3 < TMB → meta = 1326,5
+        // Proteína 180 g (720 kcal) + gordura 81 g (729 kcal) = 1449 kcal > 1326,5
         let input = NutritionInput(sex: .female, age: 70, weightKg: 90, heightCm: 150, activity: .sedentary, goal: .loseFat)
         let t = NutritionCalculator.targets(for: input)
-        XCTAssertEqual(t.calories, 1273.44, accuracy: accuracy)
+        XCTAssertEqual(t.calories, 1326.5, accuracy: accuracy)
+        XCTAssertEqual(t.limit, .bmr)
         XCTAssertEqual(t.carbs, 0)
         XCTAssertTrue(t.macrosExceedCalories)
     }

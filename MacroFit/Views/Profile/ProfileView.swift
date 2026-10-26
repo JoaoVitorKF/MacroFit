@@ -14,7 +14,7 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 Section("Suas metas diárias") {
-                    GoalsSummaryView(targets: profile.targets, sex: profile.sex, goal: profile.goal)
+                    GoalsSummaryView(targets: profile.targets, sex: profile.sex, goal: profile.goal, weightKg: profile.weightKg)
                 }
 
                 Section("Peso") {
@@ -34,6 +34,8 @@ struct ProfileView: View {
                     }
                 }
 
+                EnergySection(profile: profile)
+
                 Section("Seus dados") {
                     LabeledContent("Sexo biológico", value: profile.sex.displayName)
                     LabeledContent("Idade", value: "\(profile.age) anos")
@@ -41,6 +43,9 @@ struct ProfileView: View {
                     LabeledContent("Altura", value: "\(NumberParser.format(profile.heightCm)) cm")
                     LabeledContent("Atividade", value: "\(profile.activity.displayName) (×\(profile.activity.factor.formatted()))")
                     LabeledContent("Objetivo", value: profile.goal.displayName)
+                    if profile.goal == .loseFat {
+                        LabeledContent("Ritmo", value: "\(profile.pace.displayName) (\(profile.pace.detail))")
+                    }
                 }
 
                 Section("Aparência") {

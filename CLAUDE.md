@@ -47,6 +47,7 @@ xcrun simctl launch booted com.joaovitor.macrofit -demo-over         # meta esto
 #         -skip-splash (pula a tela de carregamento; os testes de interface sempre usam)
 #         -demo-plan "2 ovos e pão" (abre o "O que vou comer?" com esse texto)
 #         -demo-colors (com -demo-tab 2: abre a tela de cor de destaque)
+#         -demo-energy (um mês de refeições para o "Gasto real" do Perfil ter dados)
 xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /caminho/print.png
 ```
 Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015, com 115 de 160 g de proteína. Há
@@ -63,9 +64,28 @@ temporários; ela está no `.gitignore`.
 |---|---|
 | TMB (Mifflin-St Jeor) | Homem `10×kg + 6,25×cm − 5×idade + 5` · Mulher `… − 161` |
 | TDEE | TMB × fator: sedentário 1,2 · leve 1,375 · moderado 1,55 · alto 1,725 · muito alto 1,9 |
-| Meta kcal | Recomposição TDEE×0,85 · Emagrecer ×0,80 · Ganhar massa ×1,10 |
-| Piso | Mínimo de 1500 kcal (homem) / 1200 kcal (mulher). Abaixo disso usa o mínimo e marca `minimumApplied` (a UI mostra aviso) |
+| Meta kcal | Recomposição TDEE×0,85 · Ganhar massa ×1,10 · **Emagrecer: TDEE − déficit do ritmo** |
+| Ritmo (emagrecer) | `WeightLossPace`: leve 0,5% · moderado 0,75% (padrão) · rápido 1% do peso por semana. Déficit = peso × % × 7700 ÷ 7 |
+| Déficit máximo | 1000 kcal/dia (`maxDailyDeficit`); acima disso usa 1000 e marca `limit = .maxDeficit` |
+| Piso | Mínimo por sexo (1500 homem / 1200 mulher) e, **fora do ganho de massa, nunca abaixo da TMB**. Marca `limit = .sexMinimum` ou `.bmr` (a UI mostra aviso com o ritmo real) |
 | Déficit/superávit | `calorieDelta = meta final − TDEE` (com o piso aplicado, pode virar superávit) |
+| Previsão | `weeklyWeightChangeKg = calorieDelta × 7 ÷ 7700` (o Perfil mostra kg/semana, kg em 30 dias e % do peso) |
+| Gasto real | `EnergyBalance` (abaixo). Quando existe e está ligado, `NutritionInput.measuredTdee` substitui TMB × atividade (`tdeeIsMeasured`) |
+
+### Gasto real pelos registros (`Services/EnergyBalance.swift`)
+- Janela de 28 dias **sem hoje**. Gasto medido = média de kcal dos dias registrados − inclinação do peso (kg/dia) × 7700.
+  A inclinação é a **reta dos mínimos quadrados** de todas as pesagens da janela (não primeiro × último)
+- Requisitos: ≥ 14 dias com ≥ 800 kcal registradas (menos que isso = dia esquecido, fica de fora), ≥ 3 pesagens
+  cobrindo ≥ 14 dias. Sem isso, `.needsMoreData` com o progresso de cada requisito (o Perfil mostra "X de Y")
+- O medido fica entre 75% e 125% da fórmula (`wasClamped` avisa). O usado nas metas mistura com a fórmula:
+  `confiança = min(dias registrados, dias entre pesagens) ÷ 28` (0,5 a 1)
+- `EnergyStore.refresh` busca no SwiftData e grava `UserProfile.measuredTdee` (arredondado; `nil` sem dados). Roda ao
+  abrir o app (`RootView`), ao voltar para ele (`MainTabView`) e ao abrir o Perfil (`EnergySection`, que fica **abaixo
+  da seção Peso**: acima dela, empurrava o "Registrar peso" para fora da tela e o `WeightUITests` falhava).
+  `ignoresMeasuredTdee` (opcional, `nil` = ligado) é a chave "Usar o gasto real nas metas".
+  `UserProfile.formulaInput` = só a fórmula; `nutritionInput` = com o medido. O `ProfileViewModel` usa o mesmo medido
+- O demo normal não tem dados suficientes (as metas dos testes de interface continuam pela fórmula).
+  `-demo-energy` acrescenta ~2.200 kcal/dia de 7 a 28 dias atrás
 | Proteína | 2,0 g/kg (4 kcal/g) |
 | Gordura | `max(0,9 g/kg, 20% das kcal ÷ 9)` (9 kcal/g) |
 | Carboidrato | `max(0, (kcal − P×4 − G×9) ÷ 4)`. Se P+G passarem da meta, carbo = 0 e `macrosExceedCalories = true` (a UI mostra aviso) |
@@ -78,7 +98,8 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
   - **`MacroFitSchema.models`** lista todos os modelos. Use essa lista em todo `ModelContainer` (app, demo, previews e testes)
   - `WeightEntry`: um registro por dia. **O peso do perfil é sempre o do registro mais recente**, sincronizado pelo
     `WeightStore` (`Services/WeightLog.swift`), que devolve um `GoalChange` (metas antes e depois) para o aviso
-  - Os enums são salvos como `String` (`sexRaw`, `typeRaw`…) e expostos por propriedades computadas tipadas
+  - Os enums são salvos como `String` (`sexRaw`, `typeRaw`…) e expostos por propriedades computadas tipadas.
+    `paceRaw` é opcional (perfis antigos não têm; usam o moderado)
   - `Meal.day` guarda sempre o **início do dia** (00:00) e é o campo de filtro por dia. `createdAt` serve para ordenar
   - Há um único `UserProfile`; a `RootView` mostra o onboarding enquanto ele não existe
 - `Services/`: `NutritionCalculator` (funções puras), `Validation.swift` (`NumericField` com as faixas, `NumberParser`

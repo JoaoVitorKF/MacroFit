@@ -144,8 +144,9 @@ final class FoodMealUITests: XCTestCase {
         keepScreenshot("sugestao-jantar")
 
         // Os gramas mudaram (não são mais os 100 g iniciais)
-        for _ in 0..<4 { app.swipeDown() }
+        // Só rola enquanto o campo não aparece: um arraste a mais com a lista no topo fecha a folha
         let chicken = app.textFields["gramas-Frango, peito, sem pele, grelhado"]
+        for _ in 0..<4 where !chicken.isHittable { app.swipeDown() }
         XCTAssertTrue(chicken.waitForExistence(timeout: 3))
         XCTAssertNotEqual(chicken.value as? String, "100")
         keepScreenshot("sugestao-jantar-gramas")
