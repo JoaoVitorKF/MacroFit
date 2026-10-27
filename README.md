@@ -8,6 +8,20 @@ carboidrato e gordura, e deixa você registrar as refeições do dia para ver qu
 
 > As metas são estimativas por fórmulas populacionais e **não substituem um nutricionista**.
 
+<p align="center">
+  <img src="docs/screenshots/hoje.png" width="200" alt="Tela Hoje: anel de calorias com 1.015 kcal restantes">
+  <img src="docs/screenshots/o-que-vou-comer.png" width="200" alt="O que vou comer: gramas sugeridos para ovo, pão e banana">
+  <img src="docs/screenshots/refeicoes.png" width="200" alt="Refeições do dia agrupadas por tipo">
+  <img src="docs/screenshots/perfil.png" width="200" alt="Perfil com foto, meta de calorias e macros">
+</p>
+<p align="center">
+  <img src="docs/screenshots/peso.png" width="200" alt="Evolução do peso em gráfico">
+  <img src="docs/screenshots/cor.png" width="200" alt="Escolha da cor de destaque com tabela RGB">
+  <img src="docs/screenshots/hoje-escuro.png" width="200" alt="Tela Hoje no modo escuro com destaque amarelo">
+</p>
+
+<sub>Capturas do modo demonstração (dados de exemplo).</sub>
+
 ## Telas
 
 | Aba | O que tem |
