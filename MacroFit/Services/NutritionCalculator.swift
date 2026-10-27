@@ -40,6 +40,10 @@ struct NutritionTargets: Equatable {
     let protein: Double
     let carbs: Double
     let fat: Double
+    /// Peso usado para proteína e gordura: o atual ou, acima do IMC 25, o peso de referência.
+    let macroWeightKg: Double
+    /// `true` quando os macros usaram o peso de referência em vez do peso atual.
+    let usesReferenceWeight: Bool
     /// `true` quando proteína + gordura sozinhas já passam da meta de calorias (carbo fica em 0).
     let macrosExceedCalories: Bool
 
@@ -70,12 +74,15 @@ enum NutritionCalculator {
     static let kcalPerGramCarb = 4.0
     static let kcalPerGramFat = 9.0
 
-    /// Proteína: 2,0 g por kg de peso corporal.
+    /// Proteína: 2,0 g por kg (do peso de referência, ver `referenceWeight`).
     static let proteinGramsPerKg = 2.0
-    /// Gordura: 0,9 g por kg de peso corporal...
+    /// Gordura: 0,9 g por kg (do peso de referência)...
     static let fatGramsPerKg = 0.9
     /// ...mas nunca menos que 20% das calorias.
     static let minimumFatShare = 0.20
+
+    /// IMC usado para o peso de referência dos macros.
+    static let referenceBMI = 25.0
 
     /// Energia de 1 kg de peso perdido ou ganho (principalmente gordura): ~7.700 kcal.
     static let kcalPerKgBodyWeight = 7700.0
@@ -145,7 +152,15 @@ enum NutritionCalculator {
         return (calories, limit)
     }
 
-    /// Divide as calorias em macros:
+    /// Peso de referência para os macros: o menor entre o peso atual e o peso no IMC 25.
+    /// Com sobrepeso, boa parte do peso extra é gordura, que não pede proteína; 2 g/kg do peso total
+    /// superestima a meta. Ex.: 175 cm → 25 × 1,75² = 76,5625 kg.
+    static func referenceWeight(weightKg: Double, heightCm: Double) -> Double {
+        let heightM = heightCm / 100
+        return min(weightKg, referenceBMI * heightM * heightM)
+    }
+
+    /// Divide as calorias em macros (`weightKg` já é o peso de referência):
     /// - Proteína: 2,0 g/kg
     /// - Gordura: o maior entre 0,9 g/kg e 20% das calorias
     /// - Carboidrato: o que sobrar, nunca negativo
@@ -172,7 +187,8 @@ enum NutritionCalculator {
         let target = targetCalories(
             tdee: tdee, bmr: bmr, goal: input.goal, sex: input.sex, weightKg: input.weightKg, pace: input.pace
         )
-        let split = macros(calories: target.calories, weightKg: input.weightKg)
+        let macroWeight = referenceWeight(weightKg: input.weightKg, heightCm: input.heightCm)
+        let split = macros(calories: target.calories, weightKg: macroWeight)
 
         return NutritionTargets(
             bmr: bmr,
@@ -183,6 +199,8 @@ enum NutritionCalculator {
             protein: split.protein,
             carbs: split.carbs,
             fat: split.fat,
+            macroWeightKg: macroWeight,
+            usesReferenceWeight: macroWeight < input.weightKg,
             macrosExceedCalories: split.exceedsCalories
         )
     }

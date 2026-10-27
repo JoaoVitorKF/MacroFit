@@ -46,6 +46,18 @@ struct GoalsSummaryView: View {
                 MacroTile(nutrient: .carbs, grams: targets.carbs)
                 MacroTile(nutrient: .fat, grams: targets.fat)
             }
+            if targets.usesReferenceWeight {
+                Label {
+                    Text("Proteína e gordura pelo peso de referência (\(targets.macroWeightKg.kgText), IMC \(NutritionCalculator.referenceBMI.formatted())), não pelo peso atual: o peso a mais é principalmente gordura, que não precisa de proteína.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(Color.accentColor)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("peso-referencia")
+            }
 
             // Avisos
             switch targets.limit {

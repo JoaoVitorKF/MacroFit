@@ -17,6 +17,15 @@ Identificadores (tipos, funções, variáveis) ficam em inglês.
   - `MacroFitUITests` (XCUITest): fluxos de onboarding, refeições e Hoje, sempre usando o modo demo. Levam cerca de 2 min
 - Git: identidade local `JoãoV <314427355+JoaoVitorKF@users.noreply.github.com>`, a mesma do pin-upscaler
 
+## iPhone físico
+- iPhone 13 Pro Max do João (UDID `<UDID>`), Personal Team `<TEAM_ID>` (já no `project.yml`)
+- Apple ID gratuito: **o app expira em 7 dias**; reinstalar não apaga os dados (só apagar o app apaga)
+```sh
+xcodebuild -project MacroFit.xcodeproj -scheme MacroFit -configuration Release -destination 'id=<UDID>' -derivedDataPath build/device -allowProvisioningUpdates build
+xcrun devicectl device install app --device <UDID> build/device/Build/Products/Release-iphoneos/MacroFit.app
+xcrun devicectl device process launch --device <UDID> com.joaovitor.macrofit
+```
+
 ## Comandos
 ```sh
 xcodegen generate
@@ -71,6 +80,10 @@ temporários; ela está no `.gitignore`.
 | Déficit/superávit | `calorieDelta = meta final − TDEE` (com o piso aplicado, pode virar superávit) |
 | Previsão | `weeklyWeightChangeKg = calorieDelta × 7 ÷ 7700` (o Perfil mostra kg/semana, kg em 30 dias e % do peso) |
 | Gasto real | `EnergyBalance` (abaixo). Quando existe e está ligado, `NutritionInput.measuredTdee` substitui TMB × atividade (`tdeeIsMeasured`) |
+| Peso de referência | Proteína e gordura usam `referenceWeight = min(peso, 25 × altura_m²)` (peso no IMC 25). Calorias e ritmo continuam pelo peso atual. `macroWeightKg`/`usesReferenceWeight`; o Perfil mostra uma nota (`peso-referencia`). Ex.: 97 kg, 175 cm → 76,5625 kg → 153 g de proteína (não 194) |
+| Proteína | 2,0 g/kg do peso de referência (4 kcal/g) |
+| Gordura | `max(0,9 g/kg do peso de referência, 20% das kcal ÷ 9)` (9 kcal/g) |
+| Carboidrato | `max(0, (kcal − P×4 − G×9) ÷ 4)`. Se P+G passarem da meta, carbo = 0 e `macrosExceedCalories = true` (a UI mostra aviso) |
 
 ### Gasto real pelos registros (`Services/EnergyBalance.swift`)
 - Janela de 28 dias **sem hoje**. Gasto medido = média de kcal dos dias registrados − inclinação do peso (kg/dia) × 7700.
@@ -86,9 +99,6 @@ temporários; ela está no `.gitignore`.
   `UserProfile.formulaInput` = só a fórmula; `nutritionInput` = com o medido. O `ProfileViewModel` usa o mesmo medido
 - O demo normal não tem dados suficientes (as metas dos testes de interface continuam pela fórmula).
   `-demo-energy` acrescenta ~2.200 kcal/dia de 7 a 28 dias atrás
-| Proteína | 2,0 g/kg (4 kcal/g) |
-| Gordura | `max(0,9 g/kg, 20% das kcal ÷ 9)` (9 kcal/g) |
-| Carboidrato | `max(0, (kcal − P×4 − G×9) ÷ 4)`. Se P+G passarem da meta, carbo = 0 e `macrosExceedCalories = true` (a UI mostra aviso) |
 
 Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela e os testes em
 `MacroFitTests/NutritionCalculatorTests.swift`, que têm as contas à mão nos comentários.

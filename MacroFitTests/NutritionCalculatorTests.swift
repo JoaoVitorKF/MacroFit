@@ -257,14 +257,43 @@ final class NutritionCalculatorTests: XCTestCase {
     }
 
     func testCarbsNeverNegative() {
-        // TMB = 900 + 937,5 − 350 − 161 = 1326,5 → TDEE 1591,8 → − 742,5 = 849,3 < TMB → meta = 1326,5
-        // Proteína 180 g (720 kcal) + gordura 81 g (729 kcal) = 1449 kcal > 1326,5
-        let input = NutritionInput(sex: .female, age: 70, weightKg: 90, heightCm: 150, activity: .sedentary, goal: .loseFat)
+        // 1000 kcal com 90 kg: proteína 180 g (720 kcal) + gordura 81 g (729 kcal) = 1449 kcal > 1000
+        // (com o peso de referência isso quase não acontece pelo perfil; por isso a conta direta)
+        let split = NutritionCalculator.macros(calories: 1000, weightKg: 90)
+        XCTAssertEqual(split.protein, 180, accuracy: accuracy)
+        XCTAssertEqual(split.fat, 81, accuracy: accuracy)
+        XCTAssertEqual(split.carbs, 0)
+        XCTAssertTrue(split.exceedsCalories)
+    }
+
+    // MARK: - Peso de referência (IMC 25)
+
+    func testReferenceWeight() {
+        // 175 cm → 25 × 1,75² = 76,5625 kg; abaixo disso vale o peso atual
+        XCTAssertEqual(NutritionCalculator.referenceWeight(weightKg: 97, heightCm: 175), 76.5625, accuracy: accuracy)
+        XCTAssertEqual(NutritionCalculator.referenceWeight(weightKg: 70, heightCm: 175), 70, accuracy: accuracy)
+    }
+
+    func testRealProfileMacrosUseReferenceWeight() {
+        // Homem 18a, 97 kg, 175 cm, moderado, emagrecer: meta 2266,8125 kcal
+        // Proteína 76,5625 × 2 = 153,125 g (antes 194 g) · gordura 76,5625 × 0,9 = 68,90625 g
+        // (20% das kcal = 50,37 g, menor) · carbo (2266,8125 − 612,5 − 620,15625) / 4 = 258,5390625 g
+        let input = NutritionInput(sex: .male, age: 18, weightKg: 97, heightCm: 175, activity: .moderate, goal: .loseFat)
         let t = NutritionCalculator.targets(for: input)
-        XCTAssertEqual(t.calories, 1326.5, accuracy: accuracy)
-        XCTAssertEqual(t.limit, .bmr)
-        XCTAssertEqual(t.carbs, 0)
-        XCTAssertTrue(t.macrosExceedCalories)
+        XCTAssertTrue(t.usesReferenceWeight)
+        XCTAssertEqual(t.macroWeightKg, 76.5625, accuracy: accuracy)
+        XCTAssertEqual(t.protein, 153.125, accuracy: accuracy)
+        XCTAssertEqual(t.fat, 68.90625, accuracy: accuracy)
+        XCTAssertEqual(t.carbs, 258.5390625, accuracy: accuracy)
+        XCTAssertEqual(t.calories, 2266.8125, accuracy: accuracy, "As calorias continuam pelo peso atual")
+    }
+
+    func testNormalWeightUsesActualWeight() {
+        // 80 kg, 180 cm: IMC 24,7 → referência 81 kg > 80 → vale o peso atual (160 g de proteína)
+        let t = NutritionCalculator.targets(for: man)
+        XCTAssertFalse(t.usesReferenceWeight)
+        XCTAssertEqual(t.macroWeightKg, 80)
+        XCTAssertEqual(t.protein, 160, accuracy: accuracy)
     }
 
     func testMacrosAddUpToCalories() {
