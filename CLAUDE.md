@@ -18,12 +18,14 @@ Identificadores (tipos, funções, variáveis) ficam em inglês.
 - Git: identidade local `JoãoV <314427355+JoaoVitorKF@users.noreply.github.com>`, a mesma do pin-upscaler
 
 ## iPhone físico
-- iPhone 13 Pro Max do João (UDID `<UDID>`), Personal Team `<TEAM_ID>` (já no `project.yml`)
+- Team ID em `Config/Signing.local.xcconfig` (fora do git; modelo em `Signing.local.example.xcconfig`).
+  O UDID do aparelho e os comandos de instalação estão no `CLAUDE.local.md` (também fora do git)
 - Apple ID gratuito: **o app expira em 7 dias**; reinstalar não apaga os dados (só apagar o app apaga)
 ```sh
+xcrun devicectl list devices   # UDID do iPhone conectado
 xcodebuild -project MacroFit.xcodeproj -scheme MacroFit -configuration Release -destination 'id=<UDID>' -derivedDataPath build/device -allowProvisioningUpdates build
 xcrun devicectl device install app --device <UDID> build/device/Build/Products/Release-iphoneos/MacroFit.app
-xcrun devicectl device process launch --device <UDID> com.joaovitor.macrofit
+xcrun devicectl device process launch --terminate-existing --device <UDID> com.joaovitor.macrofit
 ```
 
 ## Comandos

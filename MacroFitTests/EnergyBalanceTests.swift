@@ -3,7 +3,7 @@ import XCTest
 @testable import MacroFit
 
 /// Gasto real pelos registros (balanço de energia). Contas à mão nos comentários.
-/// Referência: perfil de referência (homem 18a, 97 kg, 175 cm, moderado) → fórmula 3.067,0625 kcal.
+/// Perfil de referência (homem 18a, 97 kg, 175 cm, moderado) → fórmula 3.067,0625 kcal.
 @MainActor
 final class EnergyBalanceTests: XCTestCase {
 

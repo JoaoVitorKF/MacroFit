@@ -1,0 +1,3 @@
+// Copie para Signing.local.xcconfig (mesma pasta) e troque pelo seu Team ID:
+// Xcode › Settings › Accounts › seu Apple ID › Personal Team.
+DEVELOPMENT_TEAM = ABCDE12345

@@ -1,0 +1,4 @@
+// Assinatura do app para rodar no iPhone.
+// O Team ID de cada pessoa fica em Signing.local.xcconfig, que não vai para o git (veja o README).
+// Sem esse arquivo o projeto compila normalmente para o simulador.
+#include? "Signing.local.xcconfig"

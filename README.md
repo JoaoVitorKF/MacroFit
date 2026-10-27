@@ -101,20 +101,16 @@ rodar de novo pelo Xcode; os dados salvos continuam no iPhone.
 Vai aparecer um time chamado **"Seu Nome (Personal Team)"**.
 
 ### 2. Configure o Signing
-1. No Xcode, clique no projeto **MacroFit** (ícone azul no topo da barra lateral).
-2. Selecione o target **MacroFit**, aba **Signing & Capabilities**.
-3. Deixe **Automatically manage signing** marcado.
-4. Em **Team**, escolha o seu *Personal Team*.
-5. Se aparecer um erro de que o **Bundle Identifier** já está em uso, troque
-   `com.joaovitor.macrofit` por algo único, como `com.seunome.macrofit`.
+O Team ID fica num arquivo local, fora do git (cada pessoa tem o seu):
+```sh
+cp Config/Signing.local.example.xcconfig Config/Signing.local.xcconfig
+```
+Abra `Config/Signing.local.xcconfig` e troque `ABCDE12345` pelo seu Team ID
+(**Xcode › Settings › Accounts** › seu Apple ID › *Personal Team*; ou escolha o time em
+**Signing & Capabilities** e copie o valor de `DEVELOPMENT_TEAM` em *Build Settings*). Depois rode `xcodegen generate`.
 
-> **Atenção:** o `xcodegen generate` recria o projeto e apaga o Team que você escolheu na interface.
-> Para não precisar escolher de novo, copie o seu Team ID (Xcode › Settings › Accounts › seu time;
-> ou em *Signing & Capabilities* depois de escolher) e coloque em `project.yml`:
-> ```yaml
-> DEVELOPMENT_TEAM: "ABCDE12345"
-> ```
-> Se trocou o bundle id, troque também o `PRODUCT_BUNDLE_IDENTIFIER` no `project.yml`.
+Se aparecer um erro de que o **Bundle Identifier** já está em uso, troque `com.joaovitor.macrofit`
+por algo único, como `com.seunome.macrofit`, no `PRODUCT_BUNDLE_IDENTIFIER` do `project.yml`.
 
 ### 3. Prepare o iPhone (só uma vez)
 1. Conecte o iPhone no Mac por cabo e toque em **Confiar** no aviso do iPhone.

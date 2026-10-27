@@ -1,6 +1,12 @@
 # O .xcodeproj é gerado pelo XcodeGen a partir do project.yml
 *.xcodeproj/
 
+# Team ID da assinatura (cada pessoa tem o seu)
+Config/Signing.local.xcconfig
+
+# Anotações locais do Claude Code (aparelho, etc.)
+CLAUDE.local.md
+
 # Artefatos do Xcode
 build/
 DerivedData/
