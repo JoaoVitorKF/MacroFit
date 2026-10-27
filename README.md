@@ -17,7 +17,6 @@ carboidrato e gordura, e deixa você registrar as refeições do dia para ver qu
 <p align="center">
   <img src="docs/screenshots/peso.png" width="200" alt="Evolução do peso em gráfico">
   <img src="docs/screenshots/cor.png" width="200" alt="Escolha da cor de destaque com tabela RGB">
-  <img src="docs/screenshots/hoje-escuro.png" width="200" alt="Tela Hoje no modo escuro com destaque amarelo">
 </p>
 
 <sub>Capturas do modo demonstração (dados de exemplo).</sub>
