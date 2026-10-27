@@ -3,15 +3,20 @@ import SwiftUI
 /// Tela de carregamento mostrada ao abrir o app: um anel que se preenche (como o de calorias),
 /// o ícone e o nome. Dura cerca de 1,5 s e depois chama `onFinish`.
 /// Com "Reduzir Movimento" ativado no iPhone, aparece já completa, sem animação, e some mais rápido.
+///
+/// A cor vem direto do `ThemeStore`: aqui o `Color.accentColor` não segue o `.tint` da raiz e
+/// ficava sempre no amarelo/roxo do catálogo, mesmo com outra cor escolhida no Perfil.
 struct SplashView: View {
     let onFinish: () -> Void
 
+    @Environment(ThemeStore.self) private var themeStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var ringProgress: CGFloat = 0
     @State private var iconScale: CGFloat = 0.6
     @State private var textVisible = false
 
     var body: some View {
+        let accent = themeStore.theme.accent
         ZStack {
             // Mesmo fundo da tela de abertura do sistema, para a transição não "piscar"
             Color(.systemBackground)
@@ -20,14 +25,14 @@ struct SplashView: View {
             VStack(spacing: 24) {
                 ZStack {
                     Circle()
-                        .stroke(Color.accentColor.opacity(0.15), lineWidth: 14)
+                        .stroke(accent.opacity(0.15), lineWidth: 14)
                     Circle()
                         .trim(from: 0, to: ringProgress)
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .stroke(accent, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Image(systemName: "fork.knife")
                         .font(.system(size: 44, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(accent)
                         .scaleEffect(iconScale)
                 }
                 .frame(width: 120, height: 120)
@@ -96,4 +101,5 @@ struct LaunchContainerView: View {
 
 #Preview {
     SplashView {}
+        .environment(ThemeStore())
 }

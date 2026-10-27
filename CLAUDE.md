@@ -57,6 +57,7 @@ xcrun simctl launch booted com.joaovitor.macrofit -demo-over         # meta esto
 #         -demo-plan "2 ovos e pão" (abre o "O que vou comer?" com esse texto)
 #         -demo-colors (com -demo-tab 2: abre a tela de cor de destaque)
 #         -demo-energy (um mês de refeições para o "Gasto real" do Perfil ter dados)
+#         -demo-photo (perfil com foto de exemplo "JV", no topo do Perfil e na aba)
 xcrun simctl ui booted appearance dark && xcrun simctl io booted screenshot /caminho/print.png
 ```
 Com `-demo`, a meta é 2.345 kcal, já foram consumidas 1.330 e faltam 1.015, com 115 de 160 g de proteína. Há
@@ -183,6 +184,12 @@ Qualquer mudança de regra: altere o `NutritionCalculator`, atualize esta tabela
     (`AccentForegroundStyle`, lido do ambiente): branco ou preto, o de maior contraste WCAG sobre a cor
     (`RGBColor.readableForeground`). Branco sobre o roxo 6,5:1, preto sobre o amarelo 13,9:1. Botão desabilitado volta ao `.secondary`
   - Aviso de contraste: destaque × fundo dos cards abaixo de 3:1 (ex.: amarelo no modo claro)
+  - **A `SplashView` lê a cor direto do `ThemeStore`** (`@Environment(ThemeStore.self)`): nela o `Color.accentColor`
+    NÃO seguia o `.tint` e ficava no amarelo/roxo do catálogo mesmo com outra cor escolhida (reproduzido no simulador)
+- **Foto do perfil** (`Views/Profile/ProfilePhotoSection.swift`, no topo do Perfil): `PhotosPicker` (roda fora do app,
+  sem pedir permissão) → `ProfilePhoto.prepare` (centro em quadrado, máx. 600 px, JPEG 0,85) → `UserProfile.photoData`
+  (opcional, `@Attribute(.externalStorage)`). "Remover foto" volta ao boneco. A aba Perfil usa a foto redonda de 28 pt
+  (`ProfilePhoto.tabIcon`, `.alwaysOriginal`; sem isso o iOS pinta a foto de uma cor só)
 - Passar da meta de calorias deixa o anel **vermelho**. Laranja se confundia com o amarelo do modo escuro
 - O botão "+ Adicionar refeição" da tela Hoje fica **no fluxo**, logo abaixo do anel. Flutuante, ele cobria as barras de macros.
   Logo abaixo dele vem o card "O que vai comer?", e a faixa de atalhos fica rente à barra de abas: testes que arrastam

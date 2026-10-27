@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// Aba Perfil: metas calculadas, peso (com gráfico) e dados do usuário, com edição em uma folha (sheet).
+/// Aba Perfil: foto, metas calculadas, peso (com gráfico) e dados do usuário, com edição em uma folha (sheet).
 struct ProfileView: View {
     let profile: UserProfile
     @State private var isEditing = false
@@ -13,6 +13,8 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             List {
+                ProfilePhotoSection(profile: profile)
+
                 Section("Suas metas diárias") {
                     GoalsSummaryView(targets: profile.targets, sex: profile.sex, goal: profile.goal, weightKg: profile.weightKg)
                 }

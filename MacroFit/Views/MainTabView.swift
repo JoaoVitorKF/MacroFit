@@ -22,7 +22,13 @@ struct MainTabView: View {
                 .tag(1)
 
             ProfileView(profile: profile)
-                .tabItem { Label("Perfil", systemImage: "person.crop.circle") }
+                .tabItem {
+                    Label {
+                        Text("Perfil")
+                    } icon: {
+                        profileIcon
+                    }
+                }
                 .tag(2)
         }
         .environment(daySelection)
@@ -38,6 +44,14 @@ struct MainTabView: View {
                 EnergyStore.refresh(profile, in: context)
             }
         }
+    }
+
+    /// A foto do perfil, redonda, ou o boneco do sistema quando não há foto.
+    private var profileIcon: Image {
+        if let data = profile.photoData, let icon = ProfilePhoto.tabIcon(from: data) {
+            return Image(uiImage: icon)
+        }
+        return Image(systemName: "person.crop.circle")
     }
 
     private static var initialTab: Int {

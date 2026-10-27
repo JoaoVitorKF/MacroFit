@@ -16,6 +16,9 @@ final class UserProfile {
     var measuredTdee: Double?
     /// `true` se o usuário desligou o gasto pelos registros (metas só pela fórmula). `nil` = ligado.
     var ignoresMeasuredTdee: Bool?
+    /// Foto do perfil (JPEG quadrado, já reduzido por `ProfilePhoto.prepare`). `nil` = sem foto.
+    /// Fica em arquivo à parte (`externalStorage`), fora da tabela do banco.
+    @Attribute(.externalStorage) var photoData: Data?
     var updatedAt: Date
 
     init(

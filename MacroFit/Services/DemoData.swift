@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 
 /// Dados de exemplo para desenvolvimento, ativados pelo argumento de lançamento `-demo`.
 /// Usam um banco **em memória**: nada é gravado e os dados reais do app não são tocados.
@@ -16,6 +17,7 @@ import SwiftData
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-tab 2 -demo-weight → abre a evolução do peso
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-plan "2 ovos e pão" → abre o "O que vou comer?"
 ///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-energy -demo-tab 2 → "Gasto real" com um mês de dados
+///   xcrun simctl launch booted com.joaovitor.macrofit -demo -demo-photo -demo-tab 2 → perfil com foto (e na aba)
 enum DemoData {
     static var isEnabled: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -74,7 +76,11 @@ enum DemoData {
 
     @MainActor
     private static func insertSamples(into context: ModelContext) {
-        context.insert(UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate))
+        let profile = UserProfile(sex: .male, age: 30, weightKg: 80, heightCm: 180, activity: .moderate)
+        if ProcessInfo.processInfo.arguments.contains("-demo-photo") {
+            profile.photoData = samplePhoto()
+        }
+        context.insert(profile)
 
         let today = Date.now
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
@@ -127,6 +133,26 @@ enum DemoData {
         if ProcessInfo.processInfo.arguments.contains("-demo-over") {
             context.insert(Meal(name: "Rodízio de pizza", type: .dinner, day: today, calories: 1400, protein: 50, carbs: 150, fat: 60))
         }
+    }
+}
+
+extension DemoData {
+    /// Foto de exemplo (degradê com "JV"), passada pelo mesmo `ProfilePhoto.prepare` da galeria.
+    static func samplePhoto() -> Data? {
+        let size = CGSize(width: 800, height: 1000)
+        let image = UIGraphicsImageRenderer(size: size).image { renderer in
+            let colors = [UIColor.systemRed.cgColor, UIColor.systemOrange.cgColor] as CFArray
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) {
+                renderer.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: size.height), options: [])
+            }
+            let text = NSAttributedString(string: "JV", attributes: [
+                .font: UIFont.systemFont(ofSize: 300, weight: .heavy),
+                .foregroundColor: UIColor.white,
+            ])
+            let textSize = text.size()
+            text.draw(at: CGPoint(x: (size.width - textSize.width) / 2, y: (size.height - textSize.height) / 2))
+        }
+        return image.pngData().flatMap(ProfilePhoto.prepare)
     }
 }
 #endif
